@@ -73,6 +73,12 @@ for source in (root/'smali').rglob('*.smali'):
         continue
     text = source.read_text()
     updated = re.sub(r'Landroid/util/Log;->([vdiwe]\([^\n]*\)I)', r'Lcom/naruto/port/AppLog;->\1', text)
+    updated = re.sub(r'invoke-virtual (\{[^}]+\}), Ljava/lang/Throwable;->printStackTrace\(\)V',
+                     r'invoke-static \1, Lcom/naruto/port/AppLog;->stackTrace(Ljava/lang/Throwable;)V', updated)
+    # The upstream PrintStream calls are SDL's System.err diagnostics only.
+    if source.name == 'SDLActivity.smali':
+        updated = re.sub(r'invoke-virtual (\{[^}]+\}), Ljava/io/PrintStream;->println\(Ljava/lang/String;\)V',
+                         r'invoke-static \1, Lcom/naruto/port/AppLog;->println(Ljava/io/PrintStream;Ljava/lang/String;)V', updated)
     if updated != text:
         source.write_text(updated)
 

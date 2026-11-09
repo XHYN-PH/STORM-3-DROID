@@ -74,3 +74,21 @@
     const/4 v0, 0x0
     return v0
 .end method
+
+.method public static stackTrace(Ljava/lang/Throwable;)V
+    .locals 1
+    sget-boolean v0, Lcom/naruto/port/AppLog;->capture:Z
+    if-eqz v0, :off
+    invoke-virtual {p0}, Ljava/lang/Throwable;->printStackTrace()V
+    :off
+    return-void
+.end method
+
+.method public static println(Ljava/io/PrintStream;Ljava/lang/String;)V
+    .locals 1
+    sget-boolean v0, Lcom/naruto/port/AppLog;->capture:Z
+    if-eqz v0, :off
+    invoke-virtual {p0, p1}, Ljava/io/PrintStream;->println(Ljava/lang/String;)V
+    :off
+    return-void
+.end method

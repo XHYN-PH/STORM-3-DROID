@@ -15,10 +15,23 @@
 
 ## Android runtime validation
 
-An Android 11 Google APIs emulator with ARM64 native translation is being used
-for the actual release APK. The host has no hardware CPU virtualization, so
-software emulation is slow. Results will be recorded here after the checks
-complete; installation and UI checks must not be assumed passed yet.
+GitHub Actions run [42648091497](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42648091497)
+passed all 17 instrumentation assertions on Android 11 with ARM64 native
+translation. These cover the English controls/footer, removal of PT-BR,
+interactive logging On/Off persistence, actual upstream ARM64 library loading,
+repeated native hook installation, forced-English configuration and repeated
+initialization. A separate logcat check confirmed the real app Java logging
+marker appears when enabled and is absent when disabled.
+
+Additional SDL exception/standard-error output paths were found during review
+and are now routed through the same gate. An expanded marker check for those
+paths is pending on the updated commit; this paragraph will be updated after
+that run completes.
+
+Local software emulation installed and opened the signed APK, but Android
+system ANRs made it unsuitable for completing instrumentation. It is not
+counted as a passing instrumentation run. Full CI builds use a temporary test
+signature; the distributable APK uses the private XHYN_PH release key.
 
 ## Not established by these checks
 
