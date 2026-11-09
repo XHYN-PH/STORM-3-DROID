@@ -67,6 +67,15 @@ for added in (here/'extra-smali').rglob('*.smali'):
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(added, destination)
 
+# Gate every app/SDL Java log-output call independently of native ABI bridging.
+for source in (root/'smali').rglob('*.smali'):
+    if source.name == 'AppLog.smali':
+        continue
+    text = source.read_text()
+    updated = re.sub(r'Landroid/util/Log;->([vdiwe]\([^\n]*\)I)', r'Lcom/naruto/port/AppLog;->\1', text)
+    if updated != text:
+        source.write_text(updated)
+
 native = root/'lib/arm64-v8a/libmain.so'
 data = bytearray(native.read_bytes())
 native_hits = {}

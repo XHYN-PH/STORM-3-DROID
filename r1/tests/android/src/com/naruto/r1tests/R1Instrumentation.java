@@ -99,7 +99,9 @@ public final class R1Instrumentation extends Instrumentation {
             touch(logging);
             check(prefs.getBoolean("logging_enabled",false),"Turning Logging on persists its setting");
             check(state.getBoolean(logging),"Logging switch reflects its enabled state");
-            Log.i("R1_NATIVE_TEST","R1_LOGGING_ON_MARKER");
+            Class<?> appLog=Class.forName("com.naruto.port.AppLog",true,loader);
+            Method emit=appLog.getMethod("i",String.class,String.class);
+            emit.invoke(null,"R1_NATIVE_TEST","R1_LOGGING_ON_MARKER");
             Class<?> sdl=Class.forName("org.libsdl.app.SDL",true,loader);
             Method load=sdl.getMethod("loadLibrary",String.class,Context.class);
             progress("Loading the actual upstream ffmpeg/main libraries without starting gameplay");
@@ -110,7 +112,7 @@ public final class R1Instrumentation extends Instrumentation {
             touch(logging);
             check(!prefs.getBoolean("logging_enabled",true),"Turning Logging off persists its setting");
             check(!state.getBoolean(logging),"Logging switch reflects its disabled state");
-            Log.i("R1_NATIVE_TEST","R1_LOGGING_OFF_MARKER");
+            emit.invoke(null,"R1_NATIVE_TEST","R1_LOGGING_OFF_MARKER");
             prefs.edit().putBoolean("menu_ptbr",true).commit();
             final Throwable[] writeError=new Throwable[1];
             runOnMainSync(new Runnable(){public void run(){

@@ -25,6 +25,14 @@
 
 .method public static initialize(Landroid/content/Context;)Z
     .locals 3
+    const-string v0, "naruto"
+    const/4 v1, 0x0
+    invoke-virtual {p0, v0, v1}, Landroid/content/Context;->getSharedPreferences(Ljava/lang/String;I)Landroid/content/SharedPreferences;
+    move-result-object v0
+    const-string v2, "logging_enabled"
+    invoke-interface {v0, v2, v1}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z
+    move-result v0
+    sput-boolean v0, Lcom/naruto/port/AppLog;->capture:Z
     invoke-static {}, Lcom/naruto/port/LoggingControl;->ensureLibrary()Z
     move-result v0
     if-eqz v0, :failed
