@@ -89,6 +89,22 @@ public final class R2Instrumentation extends Instrumentation {
         }catch(Throwable e){error[0]=e;}});
         if(error[0]!=null)throw new RuntimeException(error[0]);
     }
+    private void testSaveFiles(Context c,ClassLoader loader)throws Exception {
+        File base=new File(c.getExternalFilesDir(null),"r2-fixture-"+java.util.UUID.randomUUID());File locks=new File(c.getFilesDir(),"r2-fixture-"+java.util.UUID.randomUUID());check(base.mkdirs()&&locks.mkdirs(),"Isolated Android save fixtures are created");
+        File save=new File(base,"data/content/storm3fb.s/STORM3FB.S");save.getParentFile().mkdirs();write(save,"progress-A");
+        File flag=new File(base,"save100.active");write(flag,"protected-flag");File original=new File(base,"save100-original/package/STORM3FB.S");original.getParentFile().mkdirs();write(original,"protected-original");
+        Class<?> type=Class.forName("com.naruto.r2.SaveFiles",true,loader);Object store=type.getConstructor(File.class,File.class).newInstance(base,locks);
+        try{
+            ByteArrayOutputStream exported=new ByteArrayOutputStream();type.getMethod("exportCurrent",java.io.OutputStream.class).invoke(store,exported);
+            check(exported.size()>0&&read(save).equals("progress-A"),"Android save export is read-only");
+            File backup=(File)type.getMethod("backupCurrent").invoke(store);
+            try{type.getMethod("restore",File.class).invoke(store,backup);throw new AssertionError("100% restore protection failed");}catch(java.lang.reflect.InvocationTargetException expected){check(expected.getCause() instanceof java.io.IOException,"Android restore refuses an active 100% save");}
+            check(read(flag).equals("protected-flag")&&read(original).equals("protected-original"),"Android save operations preserve both protected 100% files");
+            check(flag.delete(),"Fixture deactivation happens outside the save manager");write(save,"progress-B");type.getMethod("restore",File.class).invoke(store,backup);
+            check(read(save).equals("progress-A"),"Android filesystem supports staged save restore");
+        }finally{type.getMethod("close").invoke(store);}
+    }
+    private void write(File f,String value)throws Exception {try(java.io.FileOutputStream out=new java.io.FileOutputStream(f)){out.write(value.getBytes("UTF-8"));}}
     private void screenshot(Context c,String label)throws Exception{android.graphics.Bitmap image=getUiAutomation().takeScreenshot();if(image==null)throw new AssertionError("Screenshot unavailable");try(java.io.FileOutputStream out=new java.io.FileOutputStream(new File(c.getExternalFilesDir(null),"r2-tests-"+label+".png"))){image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);}image.recycle();}
     private void verifyR2(final Context context,final ClassLoader loader,List<View> views)throws Exception {
         waitForIdleSync();screenshot(context,"launcher");
@@ -96,6 +112,13 @@ public final class R2Instrumentation extends Instrumentation {
         check(hasText(views,"More options"),"Stock launcher contains one compact More options card");
         android.graphics.drawable.Drawable icon=context.getApplicationInfo().loadIcon(context.getPackageManager());android.graphics.Bitmap iconImage=android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888);icon.setBounds(0,0,64,64);icon.draw(new android.graphics.Canvas(iconImage));check(android.graphics.Color.alpha(iconImage.getPixel(0,0))==0&&android.graphics.Color.alpha(iconImage.getPixel(32,32))>0,"Circular app icon has transparent corners and an opaque center");iconImage.recycle();
         check(Class.forName("a.a0",true,loader).getDeclaredMethod("setValues",float[].class)!=null,"Patched stock statistics class verifies on Android");
+        View display=null;for(View v:views)if(v instanceof TextView&&"Display".contentEquals(((TextView)v).getText()))display=v;
+        check(display!=null,"Stock More options card exposes Display");final View displayButton=display;
+        runOnMainSync(()->displayButton.performClick());waitForIdleSync();
+        android.view.accessibility.AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
+        check(root!=null&&!root.findAccessibilityNodeInfosByText("Opening video").isEmpty(),"Display opens a stock dialog containing the native video switch");
+        List<android.view.accessibility.AccessibilityNodeInfo> done=root.findAccessibilityNodeInfosByText("Done");check(!done.isEmpty()&&done.get(0).performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK),"Stock settings dialog closes normally");waitForIdleSync();
+        testSaveFiles(context,loader);
         Class<?> math=Class.forName("com.naruto.r2.GameHooks",true,loader);
         check(Math.abs(((Float)math.getMethod("cropScale",float.class,float.class,int.class).invoke(null,2400f,1080f,100))-1.25f)<.001f,"Proportional crop uses equal scale for both dimensions");
         final Throwable[] error=new Throwable[1];
