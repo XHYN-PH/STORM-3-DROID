@@ -17,7 +17,7 @@ jobs:
       - name: Read screenshots from the passing Android run
         run: |
           set -euo pipefail
-          gh run download 42666518034 --name R2-Android-validation --dir results
+          gh run download 42667789029 --name R2-Android-validation --dir results
           python3 - <<'PY'
           from pathlib import Path
           import re

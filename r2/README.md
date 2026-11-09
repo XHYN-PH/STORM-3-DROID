@@ -18,6 +18,8 @@ R2 keeps the stock launcher and adds one compact **More options** card. Its dial
 
 Controller profiles, settings backup, shader-prewarming controls and touch-layout profiles are excluded as requested. Existing features are retained.
 
+Game-start settings apply on the next game launch. Reopen the launcher to apply the opening-video preference. The controller tester shows raw device values; calibration is applied to the game input path.
+
 ## Save protection
 
 The bundled `assets/save100` payload is verified unchanged. New save operations never modify `save100-original` or `save100.active`. Export reads the active save; it does not enable/disable the 100% save. Backup restore is blocked while the 100% save is active. The native game process and save manager share an OS file lock; save operations require closing the game. Restoration copies to a staging directory and preserves the current save as a normal backup before swapping. Backup selection and deletion reject traversal and symlinks.
