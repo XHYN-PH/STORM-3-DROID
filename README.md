@@ -1,8 +1,10 @@
-# STORM-3-DROID R1
+# STORM 3
+
+**Modified and Translated by XHYN_PH** · [YouTube](https://youtube.com/@xhyn_ph)
 
 ## R2 device-test build
 
-R2 renames the app to **STORM 3**, adds a circular Leaf icon and the selected controls/settings while keeping the stock interface. It includes an invisible right stick, controller visualization/reset, save export/backups, rumble controls and proportional fullscreen crop.
+R2 renames the app to **STORM 3**, adds a circular Leaf icon and new controls/settings while keeping the stock interface. It includes an invisible right stick, controller visualization/reset, save export/backups, rumble controls and proportional fullscreen crop.
 
 - [Download the R2 test APK](https://github.com/XHYN-PH/STORM-3-DROID/raw/refs/heads/r2-candidate/STORM-3-R2-arm64.apk)
 - [R2 changes](CHANGELOG_R2.md) · [Customization source and build tools](r2/README.md)
@@ -10,7 +12,7 @@ R2 renames the app to **STORM 3**, adds a circular Leaf icon and the selected co
 R2 uses the same signing key as R1 and can update it. Back up saves first. This is a device-test build; full gameplay, physical Xbox/phone rumble and vendor Vulkan crop behavior still need device feedback. R1 remains the published release.
 
 
-**Modified and Translated by XHYN_PH** · [YouTube](https://youtube.com/@xhyn_ph)
+## R1 — English Edition
 
 R1 provides an English interface, quieter menu interactions and a default-off
 logging switch, based on the upstream v0.6.16 Android port.
