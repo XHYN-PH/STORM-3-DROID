@@ -39,7 +39,10 @@ jobs:
           set -euo pipefail
           test -e /dev/kvm
           sudo chmod 666 /dev/kvm
-          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name R1_API30 --package 'system-images;android-30;google_apis;x86_64' --device pixel_2
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/r1-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name R1_API30 --path "$ANDROID_AVD_HOME/R1_API30.avd" --package 'system-images;android-30;google_apis;x86_64' --device pixel_2
+          printf 'avd.ini.encoding=UTF-8\npath=%s\ntarget=android-30\n' "$ANDROID_AVD_HOME/R1_API30.avd" > "$ANDROID_AVD_HOME/R1_API30.ini"
           "$ANDROID_HOME/emulator/emulator" -avd R1_API30 -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader -memory 3072 -no-metrics > "$RUNNER_TEMP/r1-results/emulator.log" 2>&1 &
           emulator_pid=$!
           booted=false
