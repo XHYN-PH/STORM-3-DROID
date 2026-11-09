@@ -23,10 +23,17 @@ repeated native hook installation, forced-English configuration and repeated
 initialization. A separate logcat check confirmed the real app Java logging
 marker appears when enabled and is absent when disabled.
 
-Additional SDL exception/standard-error output paths were found during review
-and are now routed through the same gate. An expanded marker check for those
-paths is pending on the updated commit; this paragraph will be updated after
-that run completes.
+The final expanded Android run [42648957828](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42648957828)
+passed on source commit `7b2a8e5bc920aabdfa98840ae83358aa2f668437`. All 17
+instrumentation assertions passed, and separate logcat checks confirmed all
+three app output paths (Java logger, SDL stack traces and SDL standard-error
+messages) emit their markers with logging On and suppress them with logging
+Off. The final host/sanitizer run [42648957813](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42648957813) also passed.
+
+The signed distributable built from that source has SHA-256
+`1d73e7e5998563adc8d8331b1adf29c3ca714fd595088909eb6f982afb3827ef`.
+Its signing, 16 KB ZIP alignment, archive integrity and source-preservation
+checks passed. The test-only instrumentation package is not bundled in the release APK.
 
 Local software emulation installed and opened the signed APK, but Android
 system ANRs made it unsuitable for completing instrumentation. It is not

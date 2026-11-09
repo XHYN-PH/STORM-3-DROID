@@ -1,6 +1,6 @@
 # Hidden settings audit — Android v0.6.16
 
-The English translation is staged in `apk-work/`. This audit was prepared against the original upstream APK before the R1 build. See `TESTING.md` for the current build and Android validation status. The later staged customization adds a Logging switch, removes the PT-BR control and forces English. Other audited candidates below remain unexposed.
+This audit was prepared against the original upstream APK before the R1 build. Reproducible customization inputs are in this directory. See `TESTING.md` for current build and Android validation results. R1 adds a Logging switch, removes the PT-BR control and forces English. Other audited candidates below remain unexposed.
 
 Inspected the upstream release APK, package `com.naruto.storm3`, version code 46. Original SHA-256: `15fcff17b64b29de84a205ea763cef71172f1086d61981c94b0d42f6257c9ecf`.
 
@@ -62,8 +62,8 @@ Brightness, shadow cap, crop/aspect, GPU budget, streaming cache, and several re
 
 ## Translation and validation limits
 
-The staged changes replace UI text, supporting error/status text, and explanatory license-file prose. Original license bodies, copyright notices, package identity, configuration keys, renderer code, assets, and game files are retained. The staged customization now adds a default-off Logging switch and forces English without a PT-BR option; other audited native settings remain unchanged. Particle/jutsu bursts are disabled in their shared handler; card/button bounce and press feedback are retained. The update dialog replaces externally fetched Portuguese release notes with an English notice; update detection/download handling is retained.
+The R1 changes replace UI text, supporting error/status text, and explanatory license-file prose. Original license bodies, copyright notices, package identity, configuration keys, renderer code, assets, and game files are retained. R1 adds a default-off Logging switch and forces English without a PT-BR option; other audited native settings remain unchanged. Particle/jutsu bursts are disabled in their shared handler; card/button bounce and press feedback are retained. The update dialog replaces externally fetched Portuguese release notes with an English notice; update detection/download handling is retained.
 
-Validation is static: exact string replacement, smali changes limited to translations, one update-notice string load, and one decorative-effect handler, plus the documented English-only and logging UI/lifecycle patches, unchanged native executable sections, format-placeholder preservation, and searches for untranslated Portuguese UI text. See `TESTING.md` for APK assembly, signing, installation and layout checks; full gameplay is outside the original audit.
+This hidden-settings audit uses static validation: exact string replacement, smali changes limited to translations, one update-notice string load, and one decorative-effect handler, plus the documented English-only and logging UI/lifecycle patches, unchanged native executable sections, format-placeholder preservation, and searches for untranslated Portuguese UI text. See `TESTING.md` for APK assembly, signing, installation and layout checks; full gameplay is outside the original audit.
 
-The latest footer reads **Modified and Translated by XHYN_PH** and opens https://youtube.com/@xhyn_ph. The native logging helper is built by `build_r1.py`; see `native-logging/README.md` for output-suppression scope and validation still required. No runtime claim is made for that switch.
+The latest footer reads **Modified and Translated by XHYN_PH** and opens https://youtube.com/@xhyn_ph. The native logging helper is built by `build_r1.py`; see `native-logging/README.md` for output-suppression scope and validation still required. Android logging integration results are recorded separately in `TESTING.md`.

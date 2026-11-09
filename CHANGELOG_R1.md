@@ -59,7 +59,9 @@ The native logging suite passes 70 regression assertions under memory and
 undefined-behavior sanitizers. The build verifies the original engine code,
 assets and notices, version/metadata, patched Android code, APK integrity,
 alignment and signing. See [the testing report](r1/TESTING.md) for Android checks
-and the exact limits of this release's validation.
+and the exact limits of this release's validation. Android 11 testing passed
+17 interface/native integration checks, plus logging On/Off checks for Java
+logs, SDL stack traces and standard-error messages.
 
 Full gameplay and physical GPU/Turnip testing require a supported device and
 legitimate game files. No blanket claim of being bug-free is made.
