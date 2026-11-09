@@ -1,0 +1,48 @@
+name: R2 UI inspection
+on:
+  push:
+    paths: ['.github/workflows/r2-inspect.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  previews:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Read screenshots from the passing Android run
+        run: |
+          set -euo pipefail
+          gh run download 42664610381 --name R2-Android-validation --dir results
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          text=Path('results/android-instrumentation.txt').read_text()
+          assert 'R2_ANDROID_RESULT=FAIL' not in text
+          result=re.search(r'R2_ANDROID_RESULT=PASS assertions=\d+',text).group()
+          print('::notice title=R2 Android result::'+result)
+          PY
+          cat > preview.py <<'PY'
+          import base64,sys
+          from pathlib import Path
+          name,part=sys.argv[1],int(sys.argv[2])
+          data=Path(f'results/{name}.preview.jpg').read_bytes()
+          assert data.endswith(b'\xff\xd9')
+          encoded=base64.b64encode(data).decode()
+          chunks=[encoded[i:i+3500] for i in range(0,len(encoded),3500)]
+          assert len(chunks)<=18
+          for i in range((part-1)*9,min(part*9,len(chunks))):
+              print(f'::notice title=R2 preview {name} {i+1:02d}/{len(chunks):02d}::'+chunks[i])
+          PY
+      - name: Launcher preview first half
+        run: python3 preview.py launcher 1
+      - name: Launcher preview second half
+        run: python3 preview.py launcher 2
+      - name: Controller preview first half
+        run: python3 preview.py controller 1
+      - name: Controller preview second half
+        run: python3 preview.py controller 2
