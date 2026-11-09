@@ -102,7 +102,9 @@ jobs:
           from pathlib import Path
           for name in ['launcher','controller']:
               data=(Path(os.environ['RUNNER_TEMP'])/'r1-results'/f'{name}.preview.jpg').read_bytes()
-              if len(data)<=45000: print(f'::notice title=R2 preview {name}::'+base64.b64encode(data).decode())
+              if len(data)<=45000:
+                  encoded=base64.b64encode(data).decode();parts=[encoded[i:i+3000] for i in range(0,len(encoded),3000)]
+                  for index,part in enumerate(parts,1):print(f'::notice title=R2 preview {name} {index:02d}/{len(parts):02d}::'+part)
           PYPREVIEW
           "$ANDROID_HOME/platform-tools/adb" logcat -d -s R1_NATIVE_TEST:I System.err:W > "$RUNNER_TEMP/r1-results/logging-markers.txt"
           python3 - <<'PY'
@@ -120,6 +122,8 @@ jobs:
               assert 'R1_'+kind+'_ON_MARKER' in markers, markers
               assert 'R1_'+kind+'_OFF_MARKER' not in markers, markers
           print('PASS: Android instrumentation and real app logcat On/Off markers')
+          import re
+          print('::notice title=R2 Android result::'+re.search(r'R2_ANDROID_RESULT=PASS assertions=\d+',result).group())
           PY
       - name: Retain validation reports, not the temporary signing key/APKs
         if: always()
