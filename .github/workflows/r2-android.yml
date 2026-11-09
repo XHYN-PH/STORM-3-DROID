@@ -94,6 +94,15 @@ jobs:
           timeout 30 "$ANDROID_HOME/platform-tools/adb" wait-for-device
           "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-launcher.png "$RUNNER_TEMP/r1-results/launcher.png"
           "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-controller.png "$RUNNER_TEMP/r1-results/controller.png"
+          "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-launcher.preview.jpg "$RUNNER_TEMP/r1-results/launcher.preview.jpg"
+          "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-controller.preview.jpg "$RUNNER_TEMP/r1-results/controller.preview.jpg"
+          python3 - <<'PYPREVIEW'
+          import os,base64
+          from pathlib import Path
+          for name in ['launcher','controller']:
+              data=(Path(os.environ['RUNNER_TEMP'])/'r1-results'/f'{name}.preview.jpg').read_bytes()
+              if len(data)<=45000: print(f'::notice title=R2 preview {name}::'+base64.b64encode(data).decode())
+          PYPREVIEW
           "$ANDROID_HOME/platform-tools/adb" logcat -d -s R1_NATIVE_TEST:I System.err:W > "$RUNNER_TEMP/r1-results/logging-markers.txt"
           python3 - <<'PY'
           from pathlib import Path
@@ -119,6 +128,7 @@ jobs:
           path: |
             ${{ runner.temp }}/r1-results/*.txt
             ${{ runner.temp }}/r1-results/*.png
+            ${{ runner.temp }}/r1-results/*.jpg
             ${{ runner.temp }}/r1-results/*.json
             ${{ runner.temp }}/r1-results/*.log
           if-no-files-found: ignore

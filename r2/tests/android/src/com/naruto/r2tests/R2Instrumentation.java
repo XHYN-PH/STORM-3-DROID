@@ -105,7 +105,7 @@ public final class R2Instrumentation extends Instrumentation {
         }finally{type.getMethod("close").invoke(store);}
     }
     private void write(File f,String value)throws Exception {try(java.io.FileOutputStream out=new java.io.FileOutputStream(f)){out.write(value.getBytes("UTF-8"));}}
-    private void screenshot(Context c,String label)throws Exception{android.graphics.Bitmap image=getUiAutomation().takeScreenshot();if(image==null)throw new AssertionError("Screenshot unavailable");try(java.io.FileOutputStream out=new java.io.FileOutputStream(new File(c.getExternalFilesDir(null),"r2-tests-"+label+".png"))){image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);}image.recycle();}
+    private void screenshot(Context c,String label)throws Exception{android.graphics.Bitmap image=getUiAutomation().takeScreenshot();if(image==null)throw new AssertionError("Screenshot unavailable");try(java.io.FileOutputStream out=new java.io.FileOutputStream(new File(c.getExternalFilesDir(null),"r2-tests-"+label+".png"))){image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);}android.graphics.Bitmap preview=android.graphics.Bitmap.createScaledBitmap(image,640,Math.max(1,image.getHeight()*640/image.getWidth()),true);try(java.io.FileOutputStream out=new java.io.FileOutputStream(new File(c.getExternalFilesDir(null),"r2-tests-"+label+".preview.jpg"))){preview.compress(android.graphics.Bitmap.CompressFormat.JPEG,45,out);}if(preview!=image)preview.recycle();image.recycle();}
     private void verifyR2(final Context context,final ClassLoader loader,List<View> views)throws Exception {
         waitForIdleSync();screenshot(context,"launcher");
         check("STORM 3".contentEquals(context.getApplicationInfo().loadLabel(context.getPackageManager())),"Installed app is named STORM 3");
@@ -127,8 +127,9 @@ public final class R2Instrumentation extends Instrumentation {
         Class<?> game=Class.forName("com.naruto.port.NarutoActivity",true,loader);
         Method stretch=game.getDeclaredMethod("applyStretch",boolean.class);stretch.setAccessible(true);
         // Deliberately unattached: execution must fail at Context access, never ART verification.
-        try{stretch.invoke(game.getConstructor().newInstance(),false);throw new AssertionError("Unattached Activity unexpectedly ran");}
-        catch(java.lang.reflect.InvocationTargetException expected){check(expected.getCause() instanceof NullPointerException,"Patched game screen method verifies before reaching its Context dependency");}
+        final Throwable[] verifierError=new Throwable[1];
+        runOnMainSync(()->{try{Object instance=game.getConstructor().newInstance();try{stretch.invoke(instance,false);throw new AssertionError("Unattached Activity unexpectedly ran");}catch(java.lang.reflect.InvocationTargetException expected){check(expected.getCause() instanceof NullPointerException,"Patched game screen method verifies before reaching its Context dependency");}}catch(Throwable e){verifierError[0]=e;}});
+        if(verifierError[0]!=null)throw new RuntimeException(verifierError[0]);
     }
     private static MotionEvent event(int action,int[] ids,float[] xs,float[] ys){
         MotionEvent.PointerProperties[] props=new MotionEvent.PointerProperties[ids.length];
