@@ -62,10 +62,29 @@ jobs:
           PYBOOT
             exit 1
           fi
-          "$ANDROID_HOME/platform-tools/adb" shell getprop ro.product.cpu.abilist
+          abis=$("$ANDROID_HOME/platform-tools/adb" shell getprop ro.product.cpu.abilist | tr -d '\r')
+          echo "::notice title=Android test ABIs::$abis"
       - name: Test the R1 Android interface and native logging integration
         run: |
           set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/r1-results/android-command-log.txt") 2>&1
+          report_failure() {
+            result=$?
+            "$ANDROID_HOME/platform-tools/adb" logcat -d -b crash -t 100 > "$RUNNER_TEMP/r1-results/android-crashes.txt" || true
+            python3 - <<'PYDIAG'
+          from pathlib import Path
+          import os
+          root=Path(os.environ['RUNNER_TEMP'])/'r1-results'
+          chunks=[]
+          for name in ['android-command-log.txt','android-instrumentation.txt','android-crashes.txt']:
+              path=root/name
+              if path.exists(): chunks.append(name+': '+path.read_text(errors='replace')[-2200:])
+          text='\n'.join(chunks).replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+          print('::error title=Android installation or runtime failure::'+text)
+          PYDIAG
+            return "$result"
+          }
+          trap report_failure ERR
           "$ANDROID_HOME/platform-tools/adb" install --no-incremental -r "$RUNNER_TEMP/r1-results/R1-ci-only.apk"
           "$ANDROID_HOME/platform-tools/adb" install --no-incremental -t -r "$RUNNER_TEMP/r1-tools/R1-tests.apk"
           "$ANDROID_HOME/platform-tools/adb" logcat -c
