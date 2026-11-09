@@ -1,8 +1,11 @@
 name: R1 Android validation
 on:
   push:
-    paths: ['r1/**', '.github/workflows/r1-android.yml']
+    paths: ['r1/**/*.py', 'r1/**/*.c', 'r1/**/*.smali', 'r1/**/*.json', 'r1/tests/android/AndroidManifest.xml', '.github/workflows/r1-android.yml']
   workflow_dispatch:
+concurrency:
+  group: r1-android-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -37,13 +40,25 @@ jobs:
           test -e /dev/kvm
           sudo chmod 666 /dev/kvm
           echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --force --name R1_API30 --package 'system-images;android-30;google_apis;x86_64' --device pixel_2
-          "$ANDROID_HOME/emulator/emulator" -avd R1_API30 -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 3072 -no-metrics > "$RUNNER_TEMP/r1-results/emulator.log" 2>&1 &
-          "$ANDROID_HOME/platform-tools/adb" wait-for-device
-          for attempt in $(seq 1 120); do
-            if [ "$("$ANDROID_HOME/platform-tools/adb" shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; then break; fi
+          "$ANDROID_HOME/emulator/emulator" -avd R1_API30 -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader -memory 3072 -no-metrics > "$RUNNER_TEMP/r1-results/emulator.log" 2>&1 &
+          emulator_pid=$!
+          booted=false
+          for attempt in $(seq 1 90); do
+            if ! kill -0 "$emulator_pid" 2>/dev/null; then break; fi
+            ready=$(timeout 5 "$ANDROID_HOME/platform-tools/adb" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)
+            if [ "$ready" = 1 ]; then booted=true; break; fi
             sleep 3
           done
-          test "$("$ANDROID_HOME/platform-tools/adb" shell getprop sys.boot_completed | tr -d '\r')" = 1
+          if [ "$booted" != true ]; then
+            python3 - <<'PYBOOT'
+          from pathlib import Path
+          import os
+          text=(Path(os.environ['RUNNER_TEMP'])/'r1-results/emulator.log').read_text(errors='replace')[-3500:]
+          text=text.replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+          print('::error title=Android emulator failed to boot::'+text)
+          PYBOOT
+            exit 1
+          fi
           "$ANDROID_HOME/platform-tools/adb" shell getprop ro.product.cpu.abilist
       - name: Test the R1 Android interface and native logging integration
         run: |
@@ -58,7 +73,10 @@ jobs:
           import os
           root=Path(os.environ['RUNNER_TEMP'])/'r1-results'
           result=(root/'android-instrumentation.txt').read_text()
-          assert 'R1_ANDROID_RESULT=PASS' in result, result
+          if 'R1_ANDROID_RESULT=PASS' not in result:
+              message=result[-3500:].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+              print('::error title=R1 Android test failure::'+message)
+              raise SystemExit(1)
           assert 'R1_ANDROID_RESULT=FAIL' not in result, result
           markers=(root/'logging-markers.txt').read_text()
           assert 'R1_LOGGING_ON_MARKER' in markers, markers
