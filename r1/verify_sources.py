@@ -32,7 +32,7 @@ def method(text, signature):
     require(found is not None,signature)
     return found.group()
 
-def verify(original, decoded):
+def verify(original, decoded, version_name="R1", version_code=47):
     with ZipFile(original) as apk:
         for name in apk.namelist():
             if not name.startswith(('lib/','assets/')) or name.endswith('/') or name=='assets/licenses.txt':continue
@@ -86,11 +86,12 @@ def verify(original, decoded):
     for symbol in ['Java_com_naruto_port_LoggingControl_nativeSetEnabled','Java_com_naruto_port_LoggingControl_nativeInstall']:
         require(symbol.encode()+b'\0' in data,'Missing JNI method: '+symbol)
     yaml=(decoded/'apktool.yml').read_text()
-    require('  versionCode: 47' in yaml and '  versionName: R1' in yaml,'Incorrect release version')
+    require(f'  versionCode: {version_code}\n' in yaml and f'  versionName: {version_name}\n' in yaml,'Incorrect release version')
     print('PASS: engine code/linkage, assets, license bodies, English language, footer, fork updater, animations, smali labels/registers, manifest and ARM64 helper checks.')
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--original',type=Path,required=True)
     parser.add_argument('--decoded',type=Path,required=True)
-    args=parser.parse_args();verify(args.original,args.decoded)
+    parser.add_argument('--version-name',default='R1');parser.add_argument('--version-code',type=int,default=47)
+    args=parser.parse_args();verify(args.original,args.decoded,args.version_name,args.version_code)

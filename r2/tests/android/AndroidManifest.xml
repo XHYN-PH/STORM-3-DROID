@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.naruto.storm3.r2tests">
+    <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="30"/>
+    <application android:label="R1 instrumentation tests" android:testOnly="true"/>
+    <instrumentation android:name="com.naruto.r2tests.R2Instrumentation" android:targetPackage="com.naruto.storm3" android:functionalTest="true"/>
+</manifest>

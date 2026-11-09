@@ -66,7 +66,14 @@ def build(args):
     licenses.write_text('R1 modifications and English translation by XHYN_PH\n'
                         'R1 source: https://github.com/XHYN-PH/STORM-3-DROID\n'
                         'Original R1 code: MIT License; upstream notices follow unchanged.\n\n' + licenses.read_text())
-    run(sys.executable, ROOT/'verify_sources.py', '--original', original, '--decoded', decoded)
+    verification_version = ['--version-name', 'R1', '--version-code', '47']
+    if args.r2:
+        r2 = ROOT.parent/'r2'
+        run(sys.executable, r2/'compile_runtime.py', '--android-jar', args.android_jar,
+            '--build-tools', args.build_tools, '--upstream', original, '--apktool', args.apktool)
+        run(sys.executable, r2/'customize.py', decoded)
+        verification_version = ['--version-name', 'R2', '--version-code', '48']
+    run(sys.executable, ROOT/'verify_sources.py', '--original', original, '--decoded', decoded, *verification_version)
     unsigned = work/'R1-unsigned.apk'
     aligned = work/'R1-aligned.apk'
     run('java', '-jar', args.apktool, 'b', '-f', '-p', work/'framework', '-o', unsigned, decoded)
@@ -82,7 +89,7 @@ def build(args):
         if 'lib/arm64-v8a/libxhynlog.so' not in apk.namelist():
             raise ValueError('Missing native logging helper')
     report = json.loads((ROOT/'translation-report.json').read_text())
-    report.update({'version': 'R1', 'version_code': 47, 'built': True, 'signed': True,
+    report.update({'version': 'R2' if args.r2 else 'R1', 'version_code': 48 if args.r2 else 47, 'built': True, 'signed': True,
                    'native_logging_helper_compiled': True, 'artifact_sha256': digest(out),
                    'host_logging_assertions': 70, 'android_runtime_tested': False})
     (out.parent/'build-report.json').write_text(json.dumps(report, indent=2, ensure_ascii=False)+'\n')
@@ -93,5 +100,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['upstream','apktool','ndk','build-tools','keystore','password-file','output']:
         parser.add_argument('--'+name, type=Path, required=True)
+    parser.add_argument('--r2',action='store_true',help='Apply the selected R2 features after the R1 base customization')
+    parser.add_argument('--android-jar',type=Path,help='Android API 30 android.jar; required with --r2')
     parser.add_argument('--alias', default='xhyn-r1')
-    build(parser.parse_args())
+    args=parser.parse_args()
+    if args.r2 and not args.android_jar:parser.error('--r2 requires --android-jar')
+    build(args)
