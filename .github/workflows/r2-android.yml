@@ -66,12 +66,13 @@ jobs:
           abis=$("$ANDROID_HOME/platform-tools/adb" shell getprop ro.product.cpu.abilist | tr -d '\r')
           echo "::notice title=Android test ABIs::$abis"
       - name: Test the R2 Android interface and native logging integration
+        timeout-minutes: 10
         run: |
           set -euo pipefail
           exec > >(tee "$RUNNER_TEMP/r1-results/android-command-log.txt") 2>&1
           report_failure() {
             result=$?
-            "$ANDROID_HOME/platform-tools/adb" logcat -d -b crash -t 100 > "$RUNNER_TEMP/r1-results/android-crashes.txt" || true
+            timeout --kill-after=5 15 "$ANDROID_HOME/platform-tools/adb" logcat -d -b crash -t 100 > "$RUNNER_TEMP/r1-results/android-crashes.txt" || true
             python3 - <<'PYDIAG'
           from pathlib import Path
           import os
@@ -86,16 +87,16 @@ jobs:
             return "$result"
           }
           trap report_failure ERR
-          "$ANDROID_HOME/platform-tools/adb" install --no-incremental -r "$RUNNER_TEMP/r1-results/R2-ci-only.apk"
-          "$ANDROID_HOME/platform-tools/adb" install --no-incremental -t -r "$RUNNER_TEMP/r1-tools/R2-tests.apk"
+          timeout --kill-after=10 90 "$ANDROID_HOME/platform-tools/adb" install --no-incremental -r "$RUNNER_TEMP/r1-results/R2-ci-only.apk"
+          timeout --kill-after=10 90 "$ANDROID_HOME/platform-tools/adb" install --no-incremental -t -r "$RUNNER_TEMP/r1-tools/R2-tests.apk"
           "$ANDROID_HOME/platform-tools/adb" logcat -c
-          timeout 600 "$ANDROID_HOME/platform-tools/adb" shell am instrument -w -r com.naruto.storm3.r2tests/com.naruto.r2tests.R2Instrumentation | tee "$RUNNER_TEMP/r1-results/android-instrumentation.txt"
-          "$ANDROID_HOME/platform-tools/adb" root
-          timeout 30 "$ANDROID_HOME/platform-tools/adb" wait-for-device
-          "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-launcher.png "$RUNNER_TEMP/r1-results/launcher.png"
-          "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-controller.png "$RUNNER_TEMP/r1-results/controller.png"
-          "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-launcher.preview.jpg "$RUNNER_TEMP/r1-results/launcher.preview.jpg"
-          "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-controller.preview.jpg "$RUNNER_TEMP/r1-results/controller.preview.jpg"
+          timeout --kill-after=10 300 "$ANDROID_HOME/platform-tools/adb" shell am instrument -w -r com.naruto.storm3.r2tests/com.naruto.r2tests.R2Instrumentation | tee "$RUNNER_TEMP/r1-results/android-instrumentation.txt"
+          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" root
+          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" wait-for-device
+          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-launcher.png "$RUNNER_TEMP/r1-results/launcher.png"
+          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-controller.png "$RUNNER_TEMP/r1-results/controller.png"
+          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-launcher.preview.jpg "$RUNNER_TEMP/r1-results/launcher.preview.jpg"
+          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-controller.preview.jpg "$RUNNER_TEMP/r1-results/controller.preview.jpg"
           python3 - <<'PYPREVIEW'
           import os,base64
           from pathlib import Path

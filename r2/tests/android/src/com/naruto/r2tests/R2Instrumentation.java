@@ -24,6 +24,8 @@ import java.util.List;
 
 public final class R2Instrumentation extends Instrumentation {
     private int assertions;
+    private volatile boolean completed;
+    private volatile String lastProgress="starting";
     private Activity launcher;
     private void check(boolean value, String message) {
         assertions++;
@@ -31,6 +33,7 @@ public final class R2Instrumentation extends Instrumentation {
         progress("PASS: " + message);
     }
     private void progress(String message) {
+        lastProgress=message;
         Bundle status = new Bundle(); status.putString("stream", message + "\n"); sendStatus(1, status);
     }
     @Override public void onCreate(Bundle args) { super.onCreate(args); start(); }
@@ -127,6 +130,7 @@ public final class R2Instrumentation extends Instrumentation {
         Class<?> game=Class.forName("com.naruto.port.NarutoActivity",true,loader);
         Method stretch=game.getDeclaredMethod("applyStretch",boolean.class);stretch.setAccessible(true);
         // Deliberately unattached: execution must fail at Context access, never ART verification.
+        progress("Verifying the patched game screen method on the UI thread");
         final Throwable[] verifierError=new Throwable[1];
         runOnMainSync(()->{try{Object instance=game.getConstructor().newInstance();try{stretch.invoke(instance,false);throw new AssertionError("Unattached Activity unexpectedly ran");}catch(java.lang.reflect.InvocationTargetException expected){check(expected.getCause() instanceof NullPointerException,"Patched game screen method verifies before reaching its Context dependency");}}catch(Throwable e){verifierError[0]=e;}});
         if(verifierError[0]!=null)throw new RuntimeException(verifierError[0]);
@@ -175,6 +179,7 @@ public final class R2Instrumentation extends Instrumentation {
         check(bitmap.getPixel(900,620)==0,"Right-stick touch area has no visible gameplay artwork");bitmap.recycle();
     }
     @Override public void onStart() {
+        Thread watchdog=new Thread(()->{try{Thread.sleep(120000);}catch(InterruptedException done){return;}if(completed)return;StringBuilder trace=new StringBuilder();for(java.util.Map.Entry<Thread,StackTraceElement[]> entry:Thread.getAllStackTraces().entrySet())if(entry.getKey().getName().equals("main")||entry.getKey().getName().contains("Instr")){trace.append(entry.getKey().getName()).append('\n');int n=0;for(StackTraceElement frame:entry.getValue()){trace.append(frame).append('\n');if(++n==12)break;}}Bundle status=new Bundle();status.putString("stream",trace+"R2_STALL_STAGE="+lastProgress+"\n");sendStatus(1,status);},"R2-watchdog");watchdog.setDaemon(true);watchdog.start();
         Bundle result=new Bundle(); Context context=getTargetContext();
         SharedPreferences prefs=context.getSharedPreferences("naruto", Context.MODE_PRIVATE);
         boolean originalLogging=prefs.getBoolean("logging_enabled",false);
@@ -242,6 +247,7 @@ public final class R2Instrumentation extends Instrumentation {
             result.putString("stream","R2_ANDROID_RESULT=FAIL\n"+stack.toString());
             finish(Activity.RESULT_CANCELED,result);
         } finally {
+            completed=true;watchdog.interrupt();
             prefs.edit().putBoolean("logging_enabled",originalLogging).putBoolean("menu_ptbr",originalPt).commit();
         }
     }
