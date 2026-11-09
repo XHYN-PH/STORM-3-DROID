@@ -12,13 +12,14 @@ public final class SaveFiles implements AutoCloseable {
     private final File base,backups;
     private final RandomAccessFile lockFile;
     private final FileLock lock;
-    public SaveFiles(File directory) throws IOException {
+    public SaveFiles(File directory) throws IOException {this(directory,directory);}
+    public SaveFiles(File directory,File lockDirectory) throws IOException {
         base=directory.getCanonicalFile();backups=new File(base,"save-backups");
         rootSafe(backups);rootSafe(new File(base,"data/content"));
-        if(Files.isSymbolicLink(new File(base,"r2-game.lock").toPath()))throw new IOException("Invalid game-lock path.");
-        lockFile=new RandomAccessFile(new File(base,"r2-game.lock"),"rw");
+        if(Files.isSymbolicLink(new File(lockDirectory,"r2-game.lock").toPath()))throw new IOException("Invalid game-lock path.");
+        lockFile=new RandomAccessFile(new File(lockDirectory,"r2-game.lock"),"rw");
         FileLock acquired=null;
-        try { acquired=lockFile.getChannel().tryLock(); } catch(OverlappingFileLockException busy) {}
+        try { acquired=lockFile.getChannel().tryLock(); } catch(OverlappingFileLockException busy) {} catch(IOException e){lockFile.close();throw e;}
         if(acquired==null){lockFile.close();throw new IOException("Close the game before managing saves.");}
         lock=acquired;
     }

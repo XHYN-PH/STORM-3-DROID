@@ -19,6 +19,13 @@ if a.r1_decoded is None:
  print('PASS: R2 host/source checks complete; decoded source checks run before APK assembly in build_r1.py.');sys.exit(0)
 decoded=work/'preflight-decoded';shutil.rmtree(decoded,ignore_errors=True);shutil.copytree(a.r1_decoded,decoded)
 run(sys.executable,ROOT/'customize.py',decoded)
+# Parameters in these stock methods are deliberately reused; their hooks must run before that reuse.
+for relative,signature,needle in [
+ ('com/naruto/port/NarutoActivity.smali','.method private applyStretch(Z)V','GameHooks;->stockScreen'),
+ ('a/a0.smali','.method public setValues([F)V','FrameGraph;->sample')]:
+ source=(decoded/'smali'/relative).read_text();body=re.search(re.escape(signature)+r'\n.*?^\.end method$',source,re.M|re.S).group()
+ before_hook=body.split(needle,1)[0]
+ if re.search(r'^    (?:iget[^ ]*|move-result[^ ]*|const[^ ]*) p[01](?:,|$)',before_hook,re.M):raise AssertionError('Hook uses a clobbered stock parameter: '+relative)
 run(sys.executable,ROOT.parent/'r1/verify_sources.py','--original',a.upstream,'--decoded',decoded,'--version-name','R2','--version-code','48')
 # No excluded feature should be exposed under another label.
 code='\n'.join(f.read_text() for f in (ROOT/'src').rglob('*.java'))

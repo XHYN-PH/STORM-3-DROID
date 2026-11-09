@@ -16,7 +16,7 @@ public final class GameHooks {
     public static SharedPreferences prefs(Context c){return c.getSharedPreferences("naruto",0);}
     public static void beforeLauncher(Activity a){if(!a.getIntent().hasExtra("trailer"))a.getIntent().putExtra("trailer",prefs(a).getBoolean("r2_video",true));}
     public static void gameStart(Activity a){
-        try{gameLockFile=new RandomAccessFile(new File(a.getExternalFilesDir(null),"r2-game.lock"),"rw");gameLock=gameLockFile.getChannel().tryLock();
+        try{gameLockFile=new RandomAccessFile(new File(a.getFilesDir(),"r2-game.lock"),"rw");gameLock=gameLockFile.getChannel().tryLock();
             if(gameLock==null)throw new IOException("A save operation is in progress. Close and reopen the game after it finishes.");
         }catch(IOException|OverlappingFileLockException e){try{if(gameLockFile!=null)gameLockFile.close();}catch(IOException ignored){}gameLockFile=null;gameLock=null;android.widget.Toast.makeText(a,"Save management is in progress. Try starting the game again when it finishes.",android.widget.Toast.LENGTH_LONG).show();a.finish();}
     }
