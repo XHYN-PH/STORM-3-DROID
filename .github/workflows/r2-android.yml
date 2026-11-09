@@ -1,7 +1,7 @@
 name: R2 Android validation
 on:
   push:
-    paths: ['r2/**', 'r1/**/*.py', 'r1/**/*.c', 'r1/**/*.smali', 'r1/**/*.json', 'r1/tests/android/AndroidManifest.xml', '.github/workflows/r2-android.yml']
+    paths: ['r2/**/*.java', 'r2/**/*.py', 'r2/assets/*.png', 'r2/tests/android/AndroidManifest.xml', 'r1/**/*.py', 'r1/**/*.c', 'r1/**/*.smali', 'r1/**/*.json', 'r1/tests/android/AndroidManifest.xml', '.github/workflows/r2-android.yml']
   workflow_dispatch:
 concurrency:
   group: r2-android-${{ github.ref }}
@@ -65,7 +65,7 @@ jobs:
           fi
           abis=$("$ANDROID_HOME/platform-tools/adb" shell getprop ro.product.cpu.abilist | tr -d '\r')
           echo "::notice title=Android test ABIs::$abis"
-      - name: Test the R1 Android interface and native logging integration
+      - name: Test the R2 Android interface and native logging integration
         run: |
           set -euo pipefail
           exec > >(tee "$RUNNER_TEMP/r1-results/android-command-log.txt") 2>&1
@@ -90,6 +90,8 @@ jobs:
           "$ANDROID_HOME/platform-tools/adb" install --no-incremental -t -r "$RUNNER_TEMP/r1-tools/R2-tests.apk"
           "$ANDROID_HOME/platform-tools/adb" logcat -c
           timeout 600 "$ANDROID_HOME/platform-tools/adb" shell am instrument -w -r com.naruto.storm3.r2tests/com.naruto.r2tests.R2Instrumentation | tee "$RUNNER_TEMP/r1-results/android-instrumentation.txt"
+          "$ANDROID_HOME/platform-tools/adb" root
+          timeout 30 "$ANDROID_HOME/platform-tools/adb" wait-for-device
           "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-launcher.png "$RUNNER_TEMP/r1-results/launcher.png"
           "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-controller.png "$RUNNER_TEMP/r1-results/controller.png"
           "$ANDROID_HOME/platform-tools/adb" logcat -d -s R1_NATIVE_TEST:I System.err:W > "$RUNNER_TEMP/r1-results/logging-markers.txt"
@@ -113,7 +115,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: R1-Android-validation
+          name: R2-Android-validation
           path: |
             ${{ runner.temp }}/r1-results/*.txt
             ${{ runner.temp }}/r1-results/*.png

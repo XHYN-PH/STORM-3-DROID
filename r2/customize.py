@@ -36,7 +36,7 @@ def customize(root):
  change(game,'.method public onCreate(Landroid/os/Bundle;)V',lambda b:returns(start(b,call('GameHooks','gameStart(Landroid/app/Activity;)V')),call('GameHooks','gameReady(Landroid/app/Activity;)V')))
  change(game,'.method public onDestroy()V',lambda b:returns(b,call('GameHooks','gameStop(Landroid/app/Activity;)V')))
  # Keep the stock in-game Fit/Stretch menu authoritative when used.
- change(game,'.method private applyStretch(Z)V',lambda b:returns(b,call('GameHooks','stockScreen(Landroid/app/Activity;Z)V',1)))
+ change(game,'.method private applyStretch(Z)V',lambda b:start(b,call('GameHooks','stockScreen(Landroid/app/Activity;Z)V',1)))
  def acquire(body):
   needle='    :goto_c\n    if-ne v3, v4, :cond_1a'
   if body.count(needle)!=1:raise ValueError('Unexpected touch pointer-acquisition block')
@@ -79,7 +79,7 @@ def customize(root):
  for name,types,target in [('hapticRumble','IFFI','rumble'),('hapticRun','IFI','run'),('hapticStop','I','stop')]:
   signature=f'.method public static {name}({types})V';last=len(types)-1
   change(manager,signature,lambda b,s=signature,t=types,l=last,f=target:s+'\n    .locals 0\n    invoke-static/range {p0 .. p'+str(l)+'}, Lcom/naruto/r2/Haptics;->'+f+'('+t+')V\n    return-void\n.end method')
- change(smali/'a/a0.smali','.method public setValues([F)V',lambda b:returns(b,'    invoke-static/range {p1 .. p1}, Lcom/naruto/r2/FrameGraph;->sample([F)V'))
+ change(smali/'a/a0.smali','.method public setValues([F)V',lambda b:start(b,'    invoke-static/range {p1 .. p1}, Lcom/naruto/r2/FrameGraph;->sample([F)V'))
  strings=root/'res/values/strings.xml';text=strings.read_text();text,n=re.subn(r'(<string name="app_name">)[^<]*(</string>)',r'\g<1>STORM 3\2',text);assert n==1;strings.write_text(text)
  image=root/'res/drawable/storm3_icon.png';image.parent.mkdir(exist_ok=True);shutil.copyfile(ROOT/'assets/storm3_icon.png',image)
  manifest=root/'AndroidManifest.xml';text=manifest.read_text().replace('android:icon="@mipmap/ic_storm3"','android:icon="@drawable/storm3_icon"').replace('android:roundIcon="@mipmap/ic_storm3"','android:roundIcon="@drawable/storm3_icon"');manifest.write_text(text)

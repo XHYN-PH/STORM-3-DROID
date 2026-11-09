@@ -94,11 +94,18 @@ public final class R2Instrumentation extends Instrumentation {
         waitForIdleSync();screenshot(context,"launcher");
         check("STORM 3".contentEquals(context.getApplicationInfo().loadLabel(context.getPackageManager())),"Installed app is named STORM 3");
         check(hasText(views,"More options"),"Stock launcher contains one compact More options card");
+        android.graphics.drawable.Drawable icon=context.getApplicationInfo().loadIcon(context.getPackageManager());android.graphics.Bitmap iconImage=android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888);icon.setBounds(0,0,64,64);icon.draw(new android.graphics.Canvas(iconImage));check(android.graphics.Color.alpha(iconImage.getPixel(0,0))==0&&android.graphics.Color.alpha(iconImage.getPixel(32,32))>0,"Circular app icon has transparent corners and an opaque center");iconImage.recycle();
+        check(Class.forName("a.a0",true,loader).getDeclaredMethod("setValues",float[].class)!=null,"Patched stock statistics class verifies on Android");
         Class<?> math=Class.forName("com.naruto.r2.GameHooks",true,loader);
         check(Math.abs(((Float)math.getMethod("cropScale",float.class,float.class,int.class).invoke(null,2400f,1080f,100))-1.25f)<.001f,"Proportional crop uses equal scale for both dimensions");
         final Throwable[] error=new Throwable[1];
         runOnMainSync(new Runnable(){public void run(){try{testTouch(loader);}catch(Throwable e){error[0]=e;}}});
         if(error[0]!=null)throw new RuntimeException(error[0]);
+        Class<?> game=Class.forName("com.naruto.port.NarutoActivity",true,loader);
+        Method stretch=game.getDeclaredMethod("applyStretch",boolean.class);stretch.setAccessible(true);
+        // Deliberately unattached: execution must fail at Context access, never ART verification.
+        try{stretch.invoke(game.getConstructor().newInstance(),false);throw new AssertionError("Unattached Activity unexpectedly ran");}
+        catch(java.lang.reflect.InvocationTargetException expected){check(expected.getCause() instanceof NullPointerException,"Patched game screen method verifies before reaching its Context dependency");}
     }
     private static MotionEvent event(int action,int[] ids,float[] xs,float[] ys){
         MotionEvent.PointerProperties[] props=new MotionEvent.PointerProperties[ids.length];
