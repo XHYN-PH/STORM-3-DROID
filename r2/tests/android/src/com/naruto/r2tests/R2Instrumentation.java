@@ -86,6 +86,10 @@ public final class R2Instrumentation extends Instrumentation {
             float width=Math.min(diagram.getWidth(),diagram.getHeight()*2.6f),x=(diagram.getWidth()-width)/2+width*.66f,y=diagram.getHeight()*.73f;
             send(diagram,MotionEvent.ACTION_DOWN,new int[]{0},new float[]{x},new float[]{y});send(diagram,MotionEvent.ACTION_UP,new int[]{0},new float[]{x},new float[]{y});
             check("r3".equals(map.getClass().getField("h").get(map)),"Tapping the diagram selects the correct R3 mapping");
+            send(diagram,MotionEvent.ACTION_DOWN,new int[]{0},new float[]{x},new float[]{y});send(diagram,MotionEvent.ACTION_UP,new int[]{0},new float[]{x},new float[]{y});
+            check(map.getClass().getField("h").get(map)==null,"Tapping a selected diagram mapping cancels it like the stock list");
+            float edge=y+diagram.getHeight()*.09f;send(diagram,MotionEvent.ACTION_DOWN,new int[]{0},new float[]{x},new float[]{edge});send(diagram,MotionEvent.ACTION_UP,new int[]{0},new float[]{x},new float[]{edge});
+            check("r3".equals(map.getClass().getField("h").get(map)),"Right-stick hit area includes the visible thumbstick edge");
             long now=SystemClock.uptimeMillis();android.view.KeyEvent down=new android.view.KeyEvent(now,now,android.view.KeyEvent.ACTION_DOWN,android.view.KeyEvent.KEYCODE_BUTTON_THUMBR,0,0,-1,0,0,android.view.InputDevice.SOURCE_GAMEPAD);
             map.dispatchKeyEvent(down);
             check("rightstick".equals(context.getSharedPreferences("naruto",0).getString("pad_r3","")),"R3 key events persist the correct native controller binding");
