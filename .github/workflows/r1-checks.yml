@@ -1,0 +1,19 @@
+name: R1 source checks
+on:
+  push:
+    paths: ['r1/**', '.github/workflows/r1-checks.yml']
+  pull_request:
+    paths: ['r1/**', '.github/workflows/r1-checks.yml']
+permissions:
+  contents: read
+jobs:
+  native-regressions:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Logging regression suite with sanitizers
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror -g -fsanitize=address,undefined -fno-omit-frame-pointer -pthread r1/tests/test_logging.c -ldl -o /tmp/r1-test-logging
+          /tmp/r1-test-logging
+      - name: Python syntax checks
+        run: python3 -m py_compile r1/build_r1.py r1/translate.py r1/verify_sources.py

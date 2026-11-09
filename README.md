@@ -1,277 +1,310 @@
+# STORM-3-DROID R1
+
+**Modified and Translated by XHYN_PH** · [YouTube](https://youtube.com/@xhyn_ph)
+
+R1 provides an English interface, quieter menu interactions and a default-off
+logging switch, based on the upstream v0.6.16 Android port.
+
+[Download R1](https://github.com/XHYN-PH/STORM-3-DROID/releases/tag/R1) ·
+[Full R1 changelog](CHANGELOG_R1.md) · [R1 source and build tools](r1/README.md) ·
+[Testing and limitations](r1/TESTING.md)
+
+All R1 customization code, translations, patches and build/test tools are
+published here. Original R1 code is [MIT-licensed](r1/LICENSE). The original
+engine/game source is not available and is not relicensed by this fork.
+Original copyright and third-party license notices are retained.
+
+R1 uses its own signing key. Back up your saves/settings before replacing an
+original upstream installation; Android cannot install a differently signed APK
+as an update. No game files are included.
+
+The base game's documentation follows. The screenshots show the upstream UI;
+see the R1 changelog for the changes in this fork.
+
+---
+
 <div align="center">
 
-<img src="docs/screenshots/icone.png" alt="Ícone" width="128">
+<img src="docs/screenshots/icone.png" alt="Icon" width="128">
 
-# 🐸 Naruto Shippuden: Ultimate Ninja Storm 3 Full Burst — Port Nativo
+# 🐸 Naruto Shippuden: Ultimate Ninja Storm 3 Full Burst — Native Port
 
-**O jogo de Xbox 360 rodando nativamente no Android (ARM64) e no PC (Windows x64), sem emulador de CPU.**
+**The Xbox 360 game running natively on Android (ARM64) and PC (Windows x64), without CPU emulation.**
 
 ![Android](https://img.shields.io/badge/Android-11%2B-3DDC84?logo=android&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
-![Arquitetura](https://img.shields.io/badge/arm64--v8a-64%20bits-orange)
-![Gráficos](https://img.shields.io/badge/Vulkan-shadowZero-AC162C?logo=vulkan&logoColor=white)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-0.6.16-blue)
+![Architecture](https://img.shields.io/badge/arm64--v8a-64%20bits-orange)
+![Graphics](https://img.shields.io/badge/Vulkan-shadowZero-AC162C?logo=vulkan&logoColor=white)
+![Version](https://img.shields.io/badge/version-R1-blue)
 
-[**⬇️ Baixar (Android e PC)**](../../releases) · [Requisitos](#-requisitos) · [Instalação](#-instalação) · [Configurações](#%EF%B8%8F-configurações) · [Perguntas](#-perguntas-frequentes)
+[**⬇️ Download (Android and PC)**](../../releases) · [Requirements](#-requirements) · [Installation](#-installation) · [Settings](#%EF%B8%8F-settings) · [FAQ](#-frequently-asked-questions)
 
-<img src="docs/screenshots/menu-pc.jpg" alt="Menu inicial" width="90%">
+<img src="docs/screenshots/menu-pc.jpg" alt="Main menu" width="90%">
 
 </div>
 
 ---
 
-## 📖 Sobre
+## 📖 About
 
-Este port **não é um emulador de Xbox 360**. O executável do jogo (`default.xex`) foi **recompilado estaticamente** de PowerPC para ARM64 (celular) e x86-64 (PC): o resultado é código nativo, que roda direto no processador. Desde a v0.4.1 a parte gráfica usa o **shadowZero**, um renderizador nativo que pega os comandos Direct3D do jogo e desenha direto em Vulkan, sem emular a GPU do Xbox 360. Isso deixa o jogo bem mais leve e permite escolher a resolução interna de **360p até 4K**. Em celulares cuja GPU não tem o que o shadowZero precisa, o app usa sozinho o backend Vulkan do Xenia, como nas versões anteriores.
+This port **is not an Xbox 360 emulator**. The game's executable (`default.xex`) was **statically recompiled** from PowerPC to ARM64 (mobile) and x86-64 (PC), producing native code that runs directly on the processor. Since v0.4.1, graphics have used **shadowZero**, a native renderer that takes the game's Direct3D commands and renders directly through Vulkan, without emulating the Xbox 360 GPU. This makes the game much lighter to run and allows internal resolutions from **360p to 4K**. On phones whose GPUs do not meet shadowZero's requirements, the app automatically falls back to Xenia's Vulkan backend, as in earlier versions.
 
 > [!IMPORTANT]
-> **O APK e o pacote de PC não contêm nenhum arquivo do jogo.** Você precisa da sua **própria cópia** de *Naruto Shippuden: Ultimate Ninja Storm 3 Full Burst* para Xbox 360, na versão indicada em [Versão do jogo](#-versão-do-jogo-obrigatória).
+> **The APK and PC package do not contain any game files.** You need your **own copy** of *Naruto Shippuden: Ultimate Ninja Storm 3 Full Burst* for Xbox 360, in the version specified under [Required game version](#-required-game-version).
 
-### ✨ Destaques
+### ✨ Highlights
 
-- **Lutas a 30 FPS** (o limite do próprio jogo), com o conteúdo do **Full Burst** carregado.
-- **Renderizador nativo shadowZero** (Direct3D → Vulkan), com resolução interna de **360p, 480p, 720p, 900p, 1080p, 2K e 4K** (padrão 480p). Roda em Mali, Adreno (inclusive Adreno 610) e com drivers Turnip.
-- **FPS escolhido no menu:** 20, 24 ou 30 (o limite do jogo), com a lógica do jogo no tempo certo (sem câmera lenta).
-- **⚡ Modo desempenho:** tira as sombras **em qualquer resolução** (não trava mais em 480p).
-- **Brilho e cores iguais aos do Xbox 360:** o bloom e a exposição da luta não estouram mais.
-- **GPU bem mais leve em resolução alta:** num POCO F3 (Adreno 650) a luta a 1080p foi de 18 para 30 FPS, e a nova **900p** roda a 30 FPS com folga.
-- **Antisserrilhado FXAA e FXAA+** e **escala FSR 1.0 / CAS** da AMD, que podem ser ligados e desligados.
-- **Controles na tela no estilo dos jogos de Naruto para celular:** losango Y/X/B/A igual ao do controle, selos coloridos com a letra de cada botão, LT/RT/LB/RB, START e SELECT escritos, o botão **DESPERTAR** (analógico direito para o lado) e os atalhos de **jutsu**, **jutsu secreto** e **avanço**.
-- **Dois controles:** o primeiro controle que conecta é o **jogador 1** e o segundo é o **jogador 2**, sozinhos. Em **MAPEAR** dá para trocar os botões de cada um (**Controle 1** e **Controle 2**), se quiser; sem mapear, os dois usam o padrão.
-- **Controle físico automático:** plugou um controle, os botões da tela somem; tirou, eles voltam. Pelo emblema do Shadow no canto da tela dá para **editar os botões** ou usar **toque + controle** juntos.
-- **Menu com a abertura do próprio jogo** tocando (sem som) na coluna da esquerda, letras maiores e **Save 100% ligado de fábrica**.
-- **Gerar quadros (AMD FG):** Off / 2x / 3x / 4x. O jogo roda a 30 FPS e a tela recebe 60, 90 ou 120 quadros por segundo. Modo **Desempenho** (leve, o mesmo do Storm 4 de PC) ou **Qualidade**, e **Tela (Hz)** Auto / 60 / 90 / 120. Feito sobre o fluxo óptico da AMD adaptado para celular (Mali, Adreno e Xclipse), sem arquivo externo.
-- **Sem congelamentos no ARM:** corrigido o anel de comandos da GPU que travava o jogo depois de alguns minutos (às vezes com o erro `0x0BADF00D`) em celulares e tablets.
-- **Android 11 e 12:** o app não fecha mais ao abrir com a internet ligada.
-- **Atualização automática:** ao abrir o menu, o app avisa quando sai versão nova aqui no GitHub e já baixa e instala.
-- **Drivers de GPU customizados (Turnip)** em celulares **Snapdragon**, importados direto pelo menu.
-- **Áudio sem picotes** nas quedas, jutsus e suportes.
-- **Painel de desempenho:** FPS, resolução e uso de CPU, GPU e RAM. Pode ser arrastado pela tela ou recolhido.
-- **Modo 16:9 ou esticado** para a tela inteira.
-- Menu inicial animado com tema do **Jiraiya** 🐸, o mesmo no celular e no PC: o Monte Myoboku ao entardecer, folhas e chakra dourado em volta do selo do 油, com os olhos do sapo espiando.
-- **Versão de PC** com janela ou tela cheia, teclado e controles de Xbox ou PlayStation.
+- **Battles at 30 FPS** (the game's own limit), with **Full Burst** content loaded.
+- **Native shadowZero renderer** (Direct3D → Vulkan), with internal resolutions of **360p, 480p, 720p, 900p, 1080p, 2K, and 4K** (480p by default). Works on Mali, Adreno (including Adreno 610), and with Turnip drivers.
+- **Choose the FPS limit in the menu:** 20, 24, or 30 (the game's limit), with game logic running at the correct speed, without slow motion.
+- **⚡ Performance mode:** removes shadows **at any resolution**, rather than locking the resolution to 480p.
+- **Brightness and colors matching the Xbox 360:** bloom and exposure during battles no longer blow out the image.
+- **Lower GPU load at high resolutions:** on a POCO F3 (Adreno 650), battles at 1080p improved from 18 to 30 FPS, and the new **900p** option runs comfortably at 30 FPS.
+- **FXAA and FXAA+ antialiasing** and AMD **FSR 1.0 / CAS scaling**, which can be turned on or off.
+- **On-screen controls styled after Naruto mobile games:** a controller-style Y/X/B/A diamond, colored seals with each button's letter, labeled LT/RT/LB/RB, START and SELECT buttons, an **AWAKEN** button (right stick to the side), and shortcuts for **jutsu**, **ultimate jutsu**, and **chakra dash**.
+- **Two controllers:** the first connected controller automatically becomes **player 1**, and the second becomes **player 2**. In **MAP (MAPEAR)**, you can remap each one (**Controller 1 / Controle 1** and **Controller 2 / Controle 2**); otherwise, both use the default layout.
+- **Automatic physical controller detection:** connect a controller and the on-screen buttons disappear; disconnect it and they return. Use the Shadow emblem in the corner to **edit buttons** or use **touch + controller** together.
+- **Menu featuring the game's own opening video**, playing silently in the left column, larger text, and **100% Save enabled by default**.
+- **Frame generation (AMD FG):** Off / 2x / 3x / 4x. The game runs at 30 FPS while the display receives 60, 90, or 120 frames per second. Choose **Performance** mode (lightweight, the same as Storm 4 on PC) or **Quality**, and **Display (Hz)** Auto / 60 / 90 / 120. Based on AMD optical flow adapted for mobile (Mali, Adreno, and Xclipse), with no external file required.
+- **No more ARM freezes:** fixes the GPU command ring issue that froze the game after a few minutes on phones and tablets, sometimes with error `0x0BADF00D`.
+- **Android 11 and 12:** the app no longer closes at startup when connected to the internet.
+- **Automatic updates:** when you open the menu, the app notifies you of new GitHub releases and can download and install them.
+- **Custom GPU drivers (Turnip)** on **Snapdragon** phones, imported directly from the menu.
+- **Stutter-free audio** during falls, jutsus, and support attacks.
+- **Performance overlay:** FPS, resolution, and CPU, GPU, and RAM usage. Can be dragged around the screen or collapsed.
+- **16:9 or stretched mode** to fill the screen.
+- Animated **Jiraiya-themed** 🐸 main menu, shared by mobile and PC: Mount Myoboku at sunset, leaves and golden chakra surrounding the 油 seal, with a toad's eyes peeking out.
+- **PC version** with windowed or fullscreen mode, keyboard support, and Xbox or PlayStation controllers.
 
-## 📸 Capturas
+## 📸 Screenshots
 
-| Tela de título | Modos de jogo |
+| Title screen | Game modes |
 |:---:|:---:|
 | <img src="docs/screenshots/titulo.jpg" width="100%"> | <img src="docs/screenshots/modos.jpg" width="100%"> |
-| **Seleção de personagens** | **Antes da luta** |
+| **Character selection** | **Before the battle** |
 | <img src="docs/screenshots/selecao.jpg" width="100%"> | <img src="docs/screenshots/versus.jpg" width="100%"> |
-| **Luta** | |
+| **Battle** | |
 | <img src="docs/screenshots/luta.jpg" width="100%"> | |
 
-## 📱 Requisitos
+## 📱 Requirements
 
 ### Android
 
-| | Mínimo | Recomendado |
+| | Minimum | Recommended |
 |---|---|---|
-| **Android** | 11 (API 30) | 13 ou mais novo |
-| **Processador** | ARM64 (arm64-v8a) | Snapdragon 8 Gen 1 / Dimensity 8000 ou superior |
-| **GPU** | Vulkan 1.1 | Mali-G710 / Adreno 730 ou superior |
-| **RAM** | 4 GB | 8 GB ou mais |
-| **Espaço** | ~7 GB (arquivos do jogo) | — |
+| **Android** | 11 (API 30) | 13 or newer |
+| **Processor** | ARM64 (arm64-v8a) | Snapdragon 8 Gen 1 / Dimensity 8000 or better |
+| **GPU** | Vulkan 1.1 | Mali-G710 / Adreno 730 or better |
+| **RAM** | 4 GB | 8 GB or more |
+| **Storage** | ~7 GB (game files) | — |
 
 ### 🖥️ PC
 
-| | Mínimo | Recomendado |
+| | Minimum | Recommended |
 |---|---|---|
-| **Sistema** | Windows 10 64 bits | Windows 11 |
-| **Processador** | x86-64 com AVX | 4 núcleos ou mais |
-| **Placa de vídeo** | Vulkan 1.1 (drivers atualizados) | GTX 1060 / RX 580 ou superior (2K e 4K: RTX 3060 / RX 6700 ou superior) |
-| **RAM** | 4 GB | 8 GB ou mais |
+| **Operating system** | Windows 10 64-bit | Windows 11 |
+| **Processor** | x86-64 with AVX | 4 cores or more |
+| **Graphics card** | Vulkan 1.1 (up-to-date drivers) | GTX 1060 / RX 580 or better (2K and 4K: RTX 3060 / RX 6700 or better) |
+| **RAM** | 4 GB | 8 GB or more |
 
-## 💿 Versão do jogo (obrigatória)
+## 💿 Required game version
 
-O port foi feito para **uma versão específica** do executável, a do **disco norte-americano** 🇺🇸🇨🇦. O código foi recompilado a partir deste arquivo, então o que vale é o `default.xex` ser **idêntico**: confira o hash abaixo.
+This port was made for **one specific executable version**, from the **North American disc** 🇺🇸🇨🇦. The code was recompiled from this file, so your `default.xex` must be **identical**: check the hash below.
 
-| Campo | Valor |
+| Field | Value |
 |---|---|
-| Jogo | Naruto Shippuden: Ultimate Ninja Storm 3 Full Burst (Xbox 360) |
-| **Região do disco** | **América do Norte, NTSC-U** |
+| Game | Naruto Shippuden: Ultimate Ninja Storm 3 Full Burst (Xbox 360) |
+| **Disc region** | **North America, NTSC-U** |
 | Title ID | `4E4D085C` |
 | Media ID | `2576927D` |
-| Versão do executável | `0.0.0.9` |
-| Trava de região do executável | somente NTSC-U (América do Norte) |
+| Executable version | `0.0.0.9` |
+| Executable region lock | NTSC-U (North America) only |
 
-| Arquivo | Tamanho | SHA-1 | MD5 |
+| File | Size | SHA-1 | MD5 |
 |---|---|---|---|
-| `default.xex` | 11.218.944 bytes | `f7ad65e26a00df6c29c9d34b291819593e455e9f` | `fd8ac164bcc8e380e84644402b6a0666` |
+| `default.xex` | 11,218,944 bytes | `f7ad65e26a00df6c29c9d34b291819593e455e9f` | `fd8ac164bcc8e380e84644402b6a0666` |
 
 <details>
-<summary><b>Como conferir o hash</b></summary>
+<summary><b>How to check the hash</b></summary>
 
 - **Windows (PowerShell):** `Get-FileHash default.xex -Algorithm SHA1`
 - **Linux / macOS:** `sha1sum default.xex`
-- **Android:** qualquer app de "hash checker" da Play Store.
+- **Android:** any hash checker app from the Play Store.
 
 </details>
 
-### Estrutura da pasta do jogo
+### Game folder structure
 
-Extraia o disco e copie **a pasta inteira** para o celular. Ela precisa ter:
+Extract the disc and copy **the entire folder** to your phone. It must contain:
 
 ```
 Naruto Shippuden Ultimate Ninja Storm 3 Full Burst/
-├── default.xex        ← executável (precisa bater com o hash acima)
+├── default.xex        ← executable (must match the hash above)
 ├── nxeart
 ├── AvatarAssetPack
-├── data/              ← dados do jogo
-└── datafb/            ← conteúdo do Full Burst
+├── data/              ← game data
+└── datafb/            ← Full Burst content
 ```
 
-## 🚀 Instalação
+## 🚀 Installation
 
 ### Android
 
-1. Baixe o **APK** na página de [**Releases**](../../releases/latest) e instale. Talvez seja preciso permitir *"instalar apps de fontes desconhecidas"*.
-2. Copie a pasta do jogo para o celular, por exemplo `Armazenamento interno/Jogos/Naruto Storm 3 Full Burst`.
-3. Abra o app e toque em **ESCOLHER PASTA**.
-4. Permita o **acesso a todos os arquivos**: o jogo lê os dados direto da pasta, sem copiar nada.
-5. Escolha a pasta que contém o `default.xex`.
-6. Ajuste as configurações e toque em **JOGAR** 🐸
+1. Download the **APK** from the [**Releases**](../../releases/latest) page and install it. You may need to allow *installation from unknown sources*.
+2. Copy the game folder to your phone, for example `Internal storage/Games/Naruto Storm 3 Full Burst`.
+3. Open the app and tap **CHOOSE FOLDER (ESCOLHER PASTA)**.
+4. Grant **all files access**: the game reads its data directly from the folder without copying anything.
+5. Select the folder containing `default.xex`.
+6. Adjust the settings and tap **PLAY (JOGAR)** 🐸
 
 ### 🖥️ PC (Windows)
 
-1. Baixe o **`.zip` do Windows** na página de [**Releases**](../../releases/latest) e extraia numa pasta.
-2. Abra **`NarutoStorm3FullBurst.exe`**.
-3. Clique em **ESCOLHER PASTA** e escolha a pasta do jogo, a que contém o `default.xex`.
-4. Ajuste as configurações e clique em **JOGAR** (ou aperte Enter).
+1. Download the **Windows `.zip`** from the [**Releases**](../../releases/latest) page and extract it to a folder.
+2. Open **`NarutoStorm3FullBurst.exe`**.
+3. Click **CHOOSE FOLDER (ESCOLHER PASTA)** and select the game folder containing `default.xex`.
+4. Adjust the settings and click **PLAY (JOGAR)**, or press Enter.
 
-As configurações, os saves e o cache de shaders ficam na pasta onde você extraiu o port (`naruto.ini`, `data/`, `cache/`), não na pasta do jogo.
+Settings, saves, and the shader cache are stored in the folder where you extracted the port (`naruto.ini`, `data/`, `cache/`), rather than in the game folder.
 
 > [!TIP]
-> Na primeira vez que cada cena aparece, o jogo compila shaders e pode engasgar um pouco. Nas próximas vezes eles já ficam salvos.
+> The first time each scene appears, the game compiles shaders and may stutter slightly. Those shaders are cached for subsequent runs.
 
-## ⚙️ Configurações
+## ⚙️ Settings
 
-| Opção | O que faz | Impacto no desempenho |
+| Option | What it does | Performance impact |
 |---|---|---|
-| **Resolução 360p / 480p** | Renderiza com menos pixels (480p é o padrão) | 🟢 Mais FPS: ideal para celulares mais fracos |
-| **Resolução 720p** | Resolução original do Xbox 360 | ⚪ Médio |
-| **Resolução 900p** | Quase a nitidez do 1080p com bem menos pixels (1600x900) | 🟡 Ponto de equilíbrio para celulares fortes |
-| **Resolução 1080p** | Imagem mais nítida na tela do celular | 🟠 Pesa um pouco a mais |
-| **Resolução 2K / 4K** | Renderiza com 4x a 9x mais pixels | 🔴 Bem mais pesado |
-| **FPS: 20 / 24 / 30** | Limite de quadros por segundo (30 é o do jogo) | 🟢 20 e 24 deixam o aparelho mais folgado |
-| **Tela: 16:9 / Esticar** | Mantém a proporção original ou estica para a tela toda | ⚪ Nenhum |
-| **Antisserrilhado: FXAA / FXAA+** | Suaviza as bordas serrilhadas | 🟠 Pesa um pouco a mais |
-| **Escala na tela: FSR / CAS** | Amplia a imagem com mais nitidez (AMD FidelityFX) | 🟠 Pesa um pouco a mais |
-| **⚡ Modo desempenho** | Sem sombras e sem antisserrilhado, na resolução que você escolher | 🟢 Mais leve |
-| **Brilho: Normal / +1 / +2** | Clareia os tons médios sem estourar o branco nem o preto | ⚪ Nenhum |
-| **Painel de FPS** | Mostra FPS, resolução, CPU, GPU e RAM | ⚪ Quase nenhum |
-| **Driver da GPU** (só Snapdragon) | Usa o driver do sistema ou um driver **Turnip** importado (`.zip` no formato AdrenoTools) | Depende do aparelho e do driver |
+| **360p / 480p resolution** | Renders fewer pixels (480p is the default) | 🟢 Higher FPS: ideal for less powerful phones |
+| **720p resolution** | Original Xbox 360 resolution | ⚪ Moderate |
+| **900p resolution** | Nearly as sharp as 1080p with far fewer pixels (1600x900) | 🟡 A good balance for powerful phones |
+| **1080p resolution** | Sharper image on your phone's screen | 🟠 Slightly more demanding |
+| **2K / 4K resolution** | Renders 4× to 9× as many pixels | 🔴 Much more demanding |
+| **FPS: 20 / 24 / 30** | Frame rate limit (30 is the game's own limit) | 🟢 20 and 24 give the device more headroom |
+| **Display: 16:9 / Stretch** | Keeps the original aspect ratio or stretches to fill the screen | ⚪ None |
+| **Antialiasing: FXAA / FXAA+** | Smooths jagged edges | 🟠 Slightly more demanding |
+| **Scaling: FSR / CAS** | Enlarges the image with improved sharpness (AMD FidelityFX) | 🟠 Slightly more demanding |
+| **⚡ Performance mode** | Disables shadows and antialiasing at your chosen resolution | 🟢 Less demanding |
+| **FPS overlay** | Shows FPS, resolution, CPU, GPU, and RAM | ⚪ Almost none |
+| **GPU Driver (Driver da GPU)** (Snapdragon only) | Uses the system driver or an imported **Turnip** driver (`.zip` in AdrenoTools format) | Depends on the device and driver |
 
 > [!NOTE]
-> Se o FPS cair, ligue o **⚡ Modo desempenho**, ou use **Antisserrilhado: Off** e **Escala: Normal** e baixe a resolução.
+> If FPS drops, enable **⚡ Performance mode**, or set **Antialiasing: Off** and **Scaling: Normal**, then lower the resolution.
 
-## 🎮 Controles
+## 🎮 Controls
 
-- **Andar:** encoste o dedo na área do analógico (por padrão, a **metade esquerda** da tela). O analógico aparece ali e segue o dedo.
-- **Botões:** losango igual ao do controle (Y em cima, X à esquerda, B à direita, A embaixo), cada um com um selo colorido da letra (A verde, B vermelho, X azul, Y amarelo), porque as dicas do jogo falam "aperte B".
+- **Movement:** touch the analog stick area, which defaults to the **left half** of the screen. The stick appears there and follows your finger.
+- **Buttons:** a controller-style diamond (Y at the top, X on the left, B on the right, A at the bottom), each with a colored letter seal (green A, red B, blue X, yellow Y), matching the game's button prompts.
 
-| Botão | Na luta |
+| Button | In battle |
 |---|---|
-| B (o maior) | Ataque |
-| A | Pular |
-| X | Ferramentas ninja |
+| B (the largest) | Attack |
+| A | Jump |
+| X | Ninja tools |
 | Y | Chakra |
-| RT | Defesa |
-| LT | Substituição |
-| LB / RB | Chamar os suportes |
-| DESPERTAR (覚) | Analógico direito para o lado (despertar) |
-| JUTSU / OUGI / AVANÇO (atalhos) | Y B / Y Y B / Y A |
-| Direcional ↑ ↓ ← → | Itens |
-| SELECT / START | Menu / pausa |
+| RT | Guard |
+| LT | Substitution |
+| LB / RB | Call support characters |
+| AWAKEN (DESPERTAR / 覚) | Right stick to the side (awakening) |
+| JUTSU / OUGI / DASH (AVANÇO) shortcuts | Y B / Y Y B / Y A |
+| D-pad ↑ ↓ ← → | Items |
+| SELECT / START | Menu / pause |
 
-- **Emblema do Shadow** (canto da tela): toque para abrir **Editar botões** (arraste os botões; "Tamanho" sem botão escolhido muda todos de uma vez, com um botão escolhido muda só ele) ou ligar **Toque + controle**.
-- **Controle físico:** controles Bluetooth e USB compatíveis com Android são reconhecidos automaticamente e os botões da tela somem enquanto ele estiver ligado.
-- **Dois controles:** o primeiro que conecta é o jogador 1, o segundo é o jogador 2. Na tela **MAPEAR** do menu, escolha **Controle 1** ou **Controle 2** e toque numa ação para trocar o botão daquele controle.
+- **Shadow emblem** (in the corner): tap to open **Edit buttons (Editar botões)** or enable **Touch + controller (Toque + controle)**. Drag buttons to reposition them. **Size (Tamanho)** changes all buttons when none is selected, or just the selected button.
+- **Physical controllers:** Android-compatible Bluetooth and USB controllers are detected automatically, and the on-screen buttons disappear while a controller is connected.
+- **Two controllers:** the first connected controller becomes player 1, and the second becomes player 2. In the menu's **MAP (MAPEAR)** screen, select **Controller 1 (Controle 1)** or **Controller 2 (Controle 2)**, then tap an action to change its button assignment.
 
 ### 🖥️ PC
 
-Controles de Xbox e PlayStation funcionam direto. No teclado:
+Xbox and PlayStation controllers work out of the box. Keyboard controls:
 
-| Tecla | Botão | Tecla | Botão |
+| Key | Button | Key | Button |
 |---|---|---|---|
-| **W A S D** | Analógico esquerdo | **Setas** | Analógico direito |
-| **I J K L** | Direcional | **Enter** / **Tab** | START / BACK |
-| **Espaço** | A | **E** | B |
+| **W A S D** | Left stick | **Arrow keys** | Right stick |
+| **I J K L** | D-pad | **Enter** / **Tab** | START / BACK |
+| **Space** | A | **E** | B |
 | **Q** | X | **F** | Y |
 | **1** / **3** | LB / RB | **Z** / **C** | LT / RT |
-| **Ctrl esq. / dir.** | Apertar os analógicos | **F11** / **Alt+Enter** | Tela cheia |
+| **Left / right Ctrl** | Stick clicks | **F11** / **Alt+Enter** | Fullscreen |
 
-## ❓ Perguntas frequentes
+## ❓ Frequently asked questions
 
 <details>
-<summary><b>O jogo fecha ao abrir / tela preta</b></summary>
+<summary><b>The game closes at startup / shows a black screen</b></summary>
 
-- Confira se o `default.xex` bate com o hash acima.
-- Confira se a permissão de **acesso a todos os arquivos** foi dada.
-- Confira se a pasta escolhida é a que contém o `default.xex`, e não uma pasta acima dela.
-- Se você trocou o **Driver da GPU**, volte para **Sistema**.
-- No Android, o botão **Enviar log** do menu manda o registro do que aconteceu: anexe-o quando abrir uma issue.
+- Check that `default.xex` matches the hash above.
+- Check that **all files access** has been granted.
+- Check that you selected the folder containing `default.xex`, rather than its parent folder.
+- If you changed **GPU Driver (Driver da GPU)**, switch back to **System (Sistema)**.
+- On Android, the menu's **Send log (Enviar log)** button shares a record of what happened. Attach it when opening an issue.
 
 </details>
 
 <details>
-<summary><b>Dá para jogar a 60 FPS?</b></summary>
+<summary><b>Can I play at 60 FPS?</b></summary>
 
-Não. O jogo original conta o tempo em quadros, travado em 30 por segundo: a 60 ele simplesmente roda duas vezes mais rápido. 30 FPS estáveis é o mesmo do Xbox 360.
-
-</details>
-
-<details>
-<summary><b>Qual driver Turnip usar? Funciona no meu Mali?</b></summary>
-
-A opção **Driver da GPU** só aparece em celulares **Snapdragon** (Adreno): os drivers Turnip são feitos para eles. Importe um `.zip` no formato do AdrenoTools pelo próprio menu. Se o jogo fechar com um driver novo, o menu oferece voltar para o driver do sistema. Em celulares com GPU Mali o jogo usa sempre o driver do sistema.
+No. The original game's timing is tied to frames and locked to 30 per second. At 60, it simply runs twice as fast. A stable 30 FPS matches the Xbox 360.
 
 </details>
 
 <details>
-<summary><b>Funciona com a versão europeia (PAL) ou de outro disco?</b></summary>
+<summary><b>How do I switch to English?</b></summary>
 
-A versão testada é a **norte-americana (NTSC-U)**. O código foi recompilado a partir desse `default.xex`, então outro disco só funciona se o `default.xex` dele for **idêntico** (mesmo SHA-1 da tabela). Se o hash for diferente, não funciona.
-
-</details>
-
-<details>
-<summary><b>Funciona em celulares 32 bits ou x86? E em Linux ou macOS?</b></summary>
-
-Não. Por enquanto só Android arm64-v8a e Windows x64.
+R1 is English-only. Its launcher, settings, dialogs and touch controls are translated, and the generated game configuration always selects English. The old PT-BR option has been removed.
 
 </details>
 
 <details>
-<summary><b>O código-fonte está disponível?</b></summary>
+<summary><b>Which Turnip driver should I use? Does it work on Mali?</b></summary>
 
-Não. Este é um projeto de código fechado. Os componentes de código aberto usados estão listados abaixo, com as respectivas licenças.
+The **GPU Driver (Driver da GPU)** option only appears on **Snapdragon** (Adreno) phones: Turnip drivers are made for those GPUs. Import an AdrenoTools-format `.zip` directly from the menu. If the game closes with a new driver, the menu offers to switch back to the system driver. On phones with Mali GPUs, the game always uses the system driver.
+
+In Android v0.6.16, open **Driver da GPU** → **Trocar** (Change) → **+ Importar driver (.zip do AdrenoTools)**. The app shows this row only when it detects a Qualcomm chipset from Android's reported SoC manufacturer or hardware name.
 
 </details>
 
-## 🙏 Créditos
+<details>
+<summary><b>Does the European (PAL) version or another disc work?</b></summary>
 
-Este projeto só foi possível graças a estes projetos de código aberto:
+The tested version is **North American (NTSC-U)**. The code was recompiled from that `default.xex`, so another disc only works if its `default.xex` is **identical**, with the same SHA-1 shown in the table. If the hash differs, it will not work.
 
-- [**XenonRecomp**](https://github.com/hedge-dev/XenonRecomp): recompilador estático de PowerPC (Xbox 360)
-- [**Xenia Canary**](https://github.com/xenia-canary/xenia-canary): referência do hardware do Xbox 360 e base do backend Vulkan
-- [**SDL 3**](https://github.com/libsdl-org/SDL): janela, entrada e áudio
-- [**FFmpeg**](https://ffmpeg.org): decodificação de áudio XMA
-- [**AMD FidelityFX FSR / CAS**](https://github.com/GPUOpen-Effects): escala e nitidez
-- [**AMD FidelityFX SDK**](https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK) (MIT): fluxo óptico e interpolação da geração de quadros
-- [**libadrenotools**](https://github.com/bylaws/libadrenotools): drivers de GPU customizados no Android
-- [**reNut**](https://github.com/masterspike52/reNut) e os ports [masseffect-nx](https://github.com/nebadasSwifty/masseffect-nx), [nfsmw-nx](https://github.com/StevensND/nfsmw-nx), banjo-nx e sa2-nx: base do renderizador nativo shadowZero
+</details>
 
-As licenças completas estão em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) e também dentro do app, no link **"Licenças"** do menu.
+<details>
+<summary><b>Does it work on 32-bit or x86 phones? What about Linux or macOS?</b></summary>
 
-## ⚖️ Aviso legal
+No. For now, only Android arm64-v8a and Windows x64 are supported.
 
-Este é um projeto de fãs, **sem fins lucrativos**, sem nenhuma ligação com a Bandai Namco, a CyberConnect2, a Ubisoft, a VIZ Media, Masashi Kishimoto ou a Microsoft. *Naruto* e *Naruto Shippuden: Ultimate Ninja Storm 3 Full Burst* são marcas e obras de seus respectivos donos.
+</details>
 
-O APK **não inclui** arquivos, vídeos, sons ou texturas do jogo: é preciso ter a sua própria cópia original. Não peça nem compartilhe arquivos do jogo nas issues.
+<details>
+<summary><b>Is the source code available?</b></summary>
+
+The R1 customization code, translations, patches and build/test tools are available in [r1/](r1/README.md). The original engine/game source is not available. Existing third-party components retain their own licenses, listed below.
+
+</details>
+
+## 🙏 Credits
+
+This project was made possible by these open-source projects:
+
+- [**XenonRecomp**](https://github.com/hedge-dev/XenonRecomp): static PowerPC (Xbox 360) recompiler
+- [**Xenia Canary**](https://github.com/xenia-canary/xenia-canary): Xbox 360 hardware reference and the basis of the Vulkan backend
+- [**SDL 3**](https://github.com/libsdl-org/SDL): windowing, input, and audio
+- [**FFmpeg**](https://ffmpeg.org): XMA audio decoding
+- [**AMD FidelityFX FSR / CAS**](https://github.com/GPUOpen-Effects): scaling and sharpening
+- [**AMD FidelityFX SDK**](https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK) (MIT): optical flow and frame generation interpolation
+- [**libadrenotools**](https://github.com/bylaws/libadrenotools): custom GPU drivers on Android
+- [**reNut**](https://github.com/masterspike52/reNut) and the [masseffect-nx](https://github.com/nebadasSwifty/masseffect-nx), [nfsmw-nx](https://github.com/StevensND/nfsmw-nx), banjo-nx, and sa2-nx ports: the basis of the native shadowZero renderer
+
+The full licenses are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and inside the app under **Licenses (Licenças)** in the menu.
+
+## ⚖️ Legal notice
+
+This is a **nonprofit fan project**, with no affiliation with Bandai Namco, CyberConnect2, Ubisoft, VIZ Media, Masashi Kishimoto, or Microsoft. *Naruto* and *Naruto Shippuden: Ultimate Ninja Storm 3 Full Burst* are trademarks and works of their respective owners.
+
+The APK **does not include** game files, videos, sounds, or textures. You need your own original copy. Do not request or share game files in the issues.
 
 ---
 
 <div align="center">
-Feito com 🧡 e muito óleo de sapo (油).
+Made with 🧡 and plenty of toad oil (油).
 </div>

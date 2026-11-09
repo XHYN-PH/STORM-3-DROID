@@ -1,0 +1,32 @@
+[
+  {
+    "file": "smali/com/naruto/port/LauncherActivity.smali",
+    "old": "    new-instance v2, La/c;\n\n    iget-object v3, v7, Lcom/naruto/port/LauncherActivity;->a:Landroid/content/SharedPreferences;\n\n    const-string v5, \"menu_ptbr\"\n\n    invoke-interface {v3, v5, v11}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z\n\n    move-result v3\n\n    invoke-direct {v2, v7, v3}, La/c;-><init>(Lcom/naruto/port/LauncherActivity;Z)V\n\n    const-string v3, \"Portuguese text\"\n\n    const-string v5, \"Portuguese game text\"\n\n    invoke-virtual {v7, v3, v5, v2}, Lcom/naruto/port/LauncherActivity;->p(Ljava/lang/String;Ljava/lang/String;La/c;)Landroid/widget/LinearLayout;\n\n    move-result-object v3\n\n    new-instance v5, La/s;\n\n    invoke-direct {v5, v7, v2, v3, v11}, La/s;-><init>(Lcom/naruto/port/LauncherActivity;La/c;Landroid/widget/LinearLayout;I)V\n\n    invoke-virtual {v2, v5}, La/c;->setListener(La/b;)V",
+    "new": "    new-instance v2, La/c;\n\n    iget-object v3, v7, Lcom/naruto/port/LauncherActivity;->a:Landroid/content/SharedPreferences;\n\n    const-string v5, \"logging_enabled\"\n\n    invoke-interface {v3, v5, v11}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z\n\n    move-result v3\n\n    invoke-direct {v2, v7, v3}, La/c;-><init>(Lcom/naruto/port/LauncherActivity;Z)V\n\n    const-string v3, \"Logging\"\n\n    const-string v5, \"Capture app logs\"\n\n    invoke-virtual {v7, v3, v5, v2}, Lcom/naruto/port/LauncherActivity;->p(Ljava/lang/String;Ljava/lang/String;La/c;)Landroid/widget/LinearLayout;\n\n    move-result-object v3\n\n    new-instance v5, Lcom/naruto/port/LoggingToggleListener;\n\n    invoke-direct {v5, v7, v2, v3, v11}, Lcom/naruto/port/LoggingToggleListener;-><init>(Lcom/naruto/port/LauncherActivity;La/c;Landroid/widget/LinearLayout;I)V\n\n    invoke-virtual {v2, v5}, La/c;->setListener(La/b;)V",
+    "reason": "Remove PT-BR control and use its slot for an independent, default-off logging preference."
+  },
+  {
+    "file": "smali/com/naruto/port/LauncherActivity.smali",
+    "old": "    iget-object v0, v1, Lcom/naruto/port/LauncherActivity;->a:Landroid/content/SharedPreferences;\n\n    const-string v8, \"menu_ptbr\"\n\n    invoke-interface {v0, v8, v2}, Landroid/content/SharedPreferences;->getBoolean(Ljava/lang/String;Z)Z\n\n    move-result v0\n\n    if-eqz v0, :cond_3\n\n    const-string v0, \"pt\"\n\n    goto :goto_3\n\n    :cond_3\n    const-string v0, \"en\"\n\n    :goto_3\n    const-string v8, \"language\"",
+    "new": "    const-string v0, \"en\"\n\n    const-string v8, \"language\"",
+    "reason": "Force English in generated configuration, ignoring any old PT-BR preference."
+  },
+  {
+    "file": "smali/com/naruto/port/LauncherActivity.smali",
+    "old": "    invoke-super/range {p0 .. p1}, Landroid/app/Activity;->onCreate(Landroid/os/Bundle;)V",
+    "new": "    invoke-super/range {p0 .. p1}, Landroid/app/Activity;->onCreate(Landroid/os/Bundle;)V\n\n    invoke-static/range {p0 .. p0}, Lcom/naruto/port/LoggingControl;->initializeLauncher(Landroid/content/Context;)V",
+    "reason": "Apply logging policy in the launcher process."
+  },
+  {
+    "file": "smali/com/naruto/port/NarutoActivity.smali",
+    "old": "    invoke-super {p0, p1}, Lorg/libsdl/app/SDLActivity;->onCreate(Landroid/os/Bundle;)V",
+    "new": "    invoke-static/range {p0 .. p0}, Lcom/naruto/port/LoggingControl;->initialize(Landroid/content/Context;)Z\n\n    invoke-super {p0, p1}, Lorg/libsdl/app/SDLActivity;->onCreate(Landroid/os/Bundle;)V",
+    "reason": "Configure logcat/stdout/stderr before game native libraries load in the separate process."
+  },
+  {
+    "file": "smali/com/naruto/port/NarutoActivity.smali",
+    "old": "    :cond_0\n    const-string p1, \"naruto\"",
+    "new": "    :cond_0\n    invoke-static/range {p0 .. p0}, Lcom/naruto/port/LoggingControl;->gameReady(Landroid/content/Context;)V\n\n    const-string p1, \"naruto\"",
+    "reason": "Install native file-log suppression after libraries load, before the SDL game thread starts."
+  }
+]
