@@ -20,8 +20,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Scope: this license applies to original R1 helper code, build/test tools and
+Scope: this license applies to original R2 Java code, build/test tools and
 new documentation contributed by XHYN_PH. It does not relicense upstream
 engine/game binaries, screenshots, third-party components, or original
 material reproduced as context in patch/translation data. Those retain their
-original rights and notices; see THIRD_PARTY_NOTICES.md and the APK's licenses.
+original rights and notices; see ../THIRD_PARTY_NOTICES.md and the APK's licenses.

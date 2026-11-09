@@ -106,6 +106,12 @@ public final class R2Instrumentation extends Instrumentation {
         try{
             ByteArrayOutputStream exported=new ByteArrayOutputStream();type.getMethod("exportCurrent",java.io.OutputStream.class).invoke(store,exported);
             check(exported.size()>0&&read(save).equals("progress-A"),"Android save export is read-only");
+            final File destination=new File(c.getExternalFilesDir(null),"r2-reimport-"+java.util.UUID.randomUUID());if(!destination.mkdirs())throw new java.io.IOException("Cannot create reimport fixture");
+            final Context originalContext=c;
+            Context isolated=new android.content.ContextWrapper(c){@Override public File getExternalFilesDir(String kind){return destination;}@Override public File getFilesDir(){File f=new File(destination,"private");f.mkdirs();return f;}@Override public android.content.SharedPreferences getSharedPreferences(String name,int mode){return originalContext.getSharedPreferences("r2_reimport_"+name,mode);}};
+            File zip=new File(c.getCacheDir(),"r2-export-test-"+java.util.UUID.randomUUID()+".zip");try(java.io.FileOutputStream out=new java.io.FileOutputStream(zip)){out.write(exported.toByteArray());}
+            Class.forName("a.l",true,loader).getMethod("i",Context.class,android.net.Uri.class).invoke(null,isolated,android.net.Uri.fromFile(zip));
+            check(read(new File(destination,"data/content/storm3fb.s/STORM3FB.S")).equals("progress-A"),"Exported ZIP reimports through the unchanged stock importer in an isolated fixture");zip.delete();
             File backup=(File)type.getMethod("backupCurrent").invoke(store);
             try{type.getMethod("restore",File.class).invoke(store,backup);throw new AssertionError("100% restore protection failed");}catch(java.lang.reflect.InvocationTargetException expected){check(expected.getCause() instanceof java.io.IOException,"Android restore refuses an active 100% save");}
             check(read(flag).equals("protected-flag")&&read(original).equals("protected-original"),"Android save operations preserve both protected 100% files");
@@ -220,6 +226,8 @@ public final class R2Instrumentation extends Instrumentation {
             emit.invoke(null,"R1_NATIVE_TEST","R1_LOGGING_ON_MARKER");
             trace.invoke(null,new RuntimeException("R1_STACK_ON_MARKER"));
             stderr.invoke(null,System.err,"R1_STDERR_ON_MARKER");
+            Class<?> exportUi=Class.forName("com.naruto.r2.LauncherUi",true,loader);Method report=exportUi.getDeclaredMethod("report",launcher.getClass());report.setAccessible(true);
+            String enabledReport=(String)report.invoke(null,launcher);check(enabledReport.contains("R1_LOGGING_ON_MARKER"),"On-demand diagnostics includes enabled app logs");
             Class<?> sdl=Class.forName("org.libsdl.app.SDL",true,loader);
             Method load=sdl.getMethod("loadLibrary",String.class,Context.class);
             progress("Loading the actual upstream ffmpeg/main libraries without starting gameplay");
@@ -233,6 +241,7 @@ public final class R2Instrumentation extends Instrumentation {
             emit.invoke(null,"R1_NATIVE_TEST","R1_LOGGING_OFF_MARKER");
             trace.invoke(null,new RuntimeException("R1_STACK_OFF_MARKER"));
             stderr.invoke(null,System.err,"R1_STDERR_OFF_MARKER");
+            String disabledReport=(String)report.invoke(null,launcher);check(disabledReport.contains("no logs were collected")&&!disabledReport.contains("R1_LOGGING_ON_MARKER"),"Diagnostics with Logging off does not collect old app logs");
             prefs.edit().putBoolean("menu_ptbr",true).commit();
             final Throwable[] writeError=new Throwable[1];
             runOnMainSync(new Runnable(){public void run(){
