@@ -1,24 +1,36 @@
-# R2 — STORM 3
+# STORM 3 — R2
 
-**Modified and Translated by XHYN_PH**
+Modified and Translated by **XHYN_PH**.
 
-## What's new
+## Menus and appearance
 
-- Renamed the app to **STORM 3** and added a circular gold Leaf icon.
-- Added an **invisible right stick**: drag an unused area on the right half of the screen. It supports simultaneous movement and button presses.
-- Added a controller diagram, live input testing, Xbox/PlayStation labels and reset options to the existing controller-mapping screen. The original mapping list remains available.
-- Added stick dead-zone controls, right-Y inversion and right-axis selection for controller compatibility.
-- Added phone/controller vibration output, strength adjustment and a test button.
-- Added proportional fullscreen crop alongside the original Fit/Stretch choices.
-- Added an opening-video toggle, brightness control, shadow presets and advanced memory/cache options.
-- Added save export/sharing and a backup manager. The bundled 100% save is kept intact; restoring backups is blocked while it is active.
-- Added optional FPS history with estimated game-frame timing, driver details and diagnostics export.
-- Kept the stock launcher style, English interface, minimal animations and default-off logging.
+- App renamed to **STORM 3**, with a circular gold Leaf icon.
+- Dark rounded dialogs, clearer text, gold accents and modern switches in the launcher and game options.
+- Original controller mapping list and touch-control layout restored.
+- In-game menu adds screen mode, touch visibility, touch with controller, opacity and brightness alongside FPS and layout editing.
+- **Return to launcher** asks before leaving and closes through the normal game shutdown path. Wait until saving finishes; unsaved progress will be lost.
 
-Changes to game-start settings apply on the next game launch.
+## Performance
 
-## Installation
+- **Balanced 720p** and **Balanced 900p** presets offer lighter graphics and Performance frame generation. Main settings can still be adjusted afterward.
+- **Auto display rate** prefers a refresh rate that matches generated output without requesting a higher matching rate unnecessarily.
+- Turning FPS off also stops its statistics and memory polling.
+- Loading-progress polling stops when preparation is complete.
+- Launcher background/logo animations pause while playing and resume on return.
+- Controller events use the original cached axis ranges, without the added per-axis calibration work.
 
-Download **STORM-3-R2-arm64.apk**. Android 11 or newer and compatible ARM64/Vulkan hardware are required. Game files are not included.
+## Display and saves
 
-R2 uses the same signing key as R1 and can update it. Back up saves first. The original upstream app uses a different key and cannot be updated directly with this APK.
+- Fit, Stretch and proportional Crop screen modes; adjustable crop amount.
+- Opening-video, brightness, shadow, GPU memory and streaming-cache options persist through game launches.
+- Export and share save ZIPs; create, export, restore and delete backups.
+- The bundled 100% save remains protected. Restoring a backup is blocked while it is active, and the current save is backed up before restoration.
+- Driver information and a shortcut to return to the system Vulkan driver.
+
+## Removed
+
+- Added invisible right stick, right-stick calibration/R3 tools and controller preview/reset controls.
+- Added rumble controls and motor test.
+- Performance history and diagnostics export.
+
+Includes R1's English interface, XHYN_PH YouTube footer, quieter menu effects and default-off logging switch. No game files are included.

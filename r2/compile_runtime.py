@@ -9,22 +9,14 @@ STUBS={
 'a/b.java': 'package a; public interface b {void a(boolean value);}',
 'a/c.java': 'package a; public class c extends android.view.View {public c(com.naruto.port.LauncherActivity a,boolean b){super(a);} public void setListener(a.b l){} }',
 'a/k.java': 'package a; public class k {public String a,b,c,d,e; public String a(){return "";}}',
-'a/c0.java':'package a; public class c0 {}',
-'a/e0.java':'package a; public class e0 {public int a; public float b,c,d,e,f,g,h;}',
-'a/d0.java':'package a; public interface d0 {void a(String s,float f,boolean b,boolean c);void b(boolean b);void c(int b,int lx,int ly,int rx,int ry,int lt,int rt);}',
-'a/f0.java': '''package a; public class f0 extends android.view.View {
- public float U,V,B,g; public boolean o; public android.util.SparseIntArray C; public a.e0 x; public a.d0 L;
- public f0(android.content.Context c){super(c);} public a.c0 a(float x,float y){return null;} public static void n(a.e0 s){} public void q(){} }''',
-'com/naruto/port/LauncherActivity.java':'''package com.naruto.port; public class LauncherActivity extends android.app.Activity {
- public java.util.ArrayList o; public int b(float v){return 0;} public android.widget.TextView g(String s,int i,int color){return null;}
- public android.widget.LinearLayout q(String s,android.view.View v){return null;} public android.widget.LinearLayout p(String s,String d,a.c c){return null;}
- public static void h(android.view.View v){} public a.k m(){return null;} public void l(String s){} }''',
-'com/naruto/port/ControllerMapActivity.java':'''package com.naruto.port; public class ControllerMapActivity extends android.app.Activity {
- public android.content.SharedPreferences a;public int b;public String h;public static String[][] s;
- public android.widget.TextView d(String text,int bg,int color){return null;}
- public void h(String s){}public void c(String s){}public void b(){}public void e(){}public void f(){} }''',
-'org/libsdl/app/SDL.java':'package org.libsdl.app;public class SDL {public static android.content.Context getContext(){return null;}}'
+'a/f0.java': 'package a; public class f0 extends android.view.View {\n public boolean o; public f0(android.content.Context c){super(c);} public void setEditing(boolean value){} public float getOpacity(){return 1;} public void setOpacity(float v){} }',
+'a/H.java':'package a; public class H implements Runnable {public void run(){}}',
+'a/Z.java':'package a; public class Z extends android.widget.FrameLayout {public Z(android.content.Context c){super(c);} public a.H b,c; public void b(){}}',
+'a/a0.java':'package a; public class a0 extends android.view.View {public a0(android.content.Context c){super(c);} public void setValues(float[] v){}}',
+'com/naruto/port/LauncherActivity.java': 'package com.naruto.port; public class LauncherActivity extends android.app.Activity {\n public java.util.ArrayList o; public int b(float v){return 0;} public android.widget.TextView g(String s,int i,int color){return null;}\n public android.widget.LinearLayout q(String s,android.view.View v){return null;} public android.widget.LinearLayout p(String s,String d,a.c c){return null;}\n public static void h(android.view.View v){} public a.k m(){return null;} public void l(String s){} public void t(){} }',
+'com/naruto/port/NarutoActivity.java': 'package com.naruto.port; public class NarutoActivity extends android.app.Activity {\n public a.f0 controls; public a.Z shadowPanel; public a.a0 statsView; public android.widget.LinearLayout preparePanel; public android.widget.ProgressBar prepareBar; public android.widget.TextView prepareCount;\n public boolean prepareSeen; public long prepareStarted; public android.os.Handler statsHandler; public Runnable statsUpdater,prepareUpdater; public int surfaceFrameRate;\n public void r2ApplyStretch(boolean v){} public void r2ApplyControllerMode(){}\n public static native float[] nativeStatsValues(); public static native int[] nativeShaderPrepare(); public static native void nativeSetTouch(int a,int b,int c,int d,int e,int f,int g); public static native void nativeSetShowStats(boolean v); public static native boolean nativeShadowSet(String key,String value);\n}'
 }
+
 def run(*parts): subprocess.run([str(x) for x in parts],check=True)
 def compile(args):
  work=ROOT/'.build/runtime';shutil.rmtree(work,ignore_errors=True);work.mkdir(parents=True)

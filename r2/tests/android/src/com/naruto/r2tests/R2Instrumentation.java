@@ -77,23 +77,14 @@ public final class R2Instrumentation extends Instrumentation {
     }
     private void testController(Context context,ClassLoader loader)throws Exception {
         Intent intent=new Intent();intent.setClassName(context.getPackageName(),"com.naruto.port.ControllerMapActivity");intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        final Activity map=startActivitySync(intent);waitForIdleSync();SystemClock.sleep(4000);screenshot(context,"controller");final Throwable[] error=new Throwable[1];
+        final Activity map=startActivitySync(intent);waitForIdleSync();SystemClock.sleep(1000);screenshot(context,"controller");final Throwable[] error=new Throwable[1];
         runOnMainSync(()->{try{
             List<View> views=new ArrayList<>();collect(map.getWindow().getDecorView(),views);
-            View diagram=null;for(View v:views)if(v.getClass().getName().equals("com.naruto.r2.ControllerUi"))diagram=v;boolean found=diagram!=null;
-            check(found,"Controller visualization is installed in the stock mapping activity");
-            check(hasText(views,"Reset selected")&&hasText(views,"Reset player")&&hasText(views,"Reset all"),"Controller mapping exposes all three reset actions");
-            float width=Math.min(diagram.getWidth(),diagram.getHeight()*2.6f),x=(diagram.getWidth()-width)/2+width*.66f,y=diagram.getHeight()*.73f;
-            send(diagram,MotionEvent.ACTION_DOWN,new int[]{0},new float[]{x},new float[]{y});send(diagram,MotionEvent.ACTION_UP,new int[]{0},new float[]{x},new float[]{y});
-            check("r3".equals(map.getClass().getField("h").get(map)),"Tapping the diagram selects the correct R3 mapping");
-            send(diagram,MotionEvent.ACTION_DOWN,new int[]{0},new float[]{x},new float[]{y});send(diagram,MotionEvent.ACTION_UP,new int[]{0},new float[]{x},new float[]{y});
-            check(map.getClass().getField("h").get(map)==null,"Tapping a selected diagram mapping cancels it like the stock list");
-            float edge=y+diagram.getHeight()*.09f;send(diagram,MotionEvent.ACTION_DOWN,new int[]{0},new float[]{x},new float[]{edge});send(diagram,MotionEvent.ACTION_UP,new int[]{0},new float[]{x},new float[]{edge});
-            check("r3".equals(map.getClass().getField("h").get(map)),"Right-stick hit area includes the visible thumbstick edge");
-            long now=SystemClock.uptimeMillis();android.view.KeyEvent down=new android.view.KeyEvent(now,now,android.view.KeyEvent.ACTION_DOWN,android.view.KeyEvent.KEYCODE_BUTTON_THUMBR,0,0,-1,0,0,android.view.InputDevice.SOURCE_GAMEPAD);
-            map.dispatchKeyEvent(down);
-            check("rightstick".equals(context.getSharedPreferences("naruto",0).getString("pad_r3","")),"R3 key events persist the correct native controller binding");
-            map.dispatchKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_UP,android.view.KeyEvent.KEYCODE_BUTTON_THUMBR));
+            check(!hasText(views,"Reset selected")&&!hasText(views,"Diagram"),"Added controller preview and reset UI are removed");
+            java.util.Map rows=(java.util.Map)map.getClass().getField("f").get(map);
+            check(rows.size()==16,"Stock controller mapping list contains all original bindings");
+            ((View)rows.get("a")).performClick();check("a".equals(map.getClass().getField("h").get(map)),"Original mapping selection works");
+            ((View)rows.get("a")).performClick();check(map.getClass().getField("h").get(map)==null,"Original mapping selection cancels normally");
             map.finish();
         }catch(Throwable e){error[0]=e;}});
         if(error[0]!=null)throw new RuntimeException(error[0]);
@@ -124,6 +115,7 @@ public final class R2Instrumentation extends Instrumentation {
     private void verifyR2(final Context context,final ClassLoader loader,List<View> views)throws Exception {
         waitForIdleSync();screenshot(context,"launcher");
         check("STORM 3".contentEquals(context.getApplicationInfo().loadLabel(context.getPackageManager())),"Installed app is named STORM 3");
+        check(hasText(views,"Performance"),"Performance presets are exposed in the launcher");
         check(hasText(views,"More options"),"Stock launcher contains one compact More options card");
         android.graphics.drawable.Drawable icon=context.getApplicationInfo().loadIcon(context.getPackageManager());android.graphics.Bitmap iconImage=android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888);icon.setBounds(0,0,64,64);icon.draw(new android.graphics.Canvas(iconImage));check(android.graphics.Color.alpha(iconImage.getPixel(0,0))==0&&android.graphics.Color.alpha(iconImage.getPixel(32,32))>0,"Circular app icon has transparent corners and an opaque center");iconImage.recycle();
         check(Class.forName("a.a0",true,loader).getDeclaredMethod("setValues",float[].class)!=null,"Patched stock statistics class verifies on Android");
@@ -132,13 +124,12 @@ public final class R2Instrumentation extends Instrumentation {
         runOnMainSync(()->displayButton.performClick());waitForIdleSync();
         android.view.accessibility.AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();
         check(root!=null&&!root.findAccessibilityNodeInfosByText("Opening video").isEmpty(),"Display opens a stock dialog containing the native video switch");
+        screenshot(context,"display");
         List<android.view.accessibility.AccessibilityNodeInfo> done=root.findAccessibilityNodeInfosByText("Done");check(!done.isEmpty()&&done.get(0).performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK),"Stock settings dialog closes normally");waitForIdleSync();
         testSaveFiles(context,loader);
         Class<?> math=Class.forName("com.naruto.r2.GameHooks",true,loader);
         check(Math.abs(((Float)math.getMethod("cropScale",float.class,float.class,int.class).invoke(null,2400f,1080f,100))-1.25f)<.001f,"Proportional crop uses equal scale for both dimensions");
-        final Throwable[] error=new Throwable[1];
-        runOnMainSync(new Runnable(){public void run(){try{testTouch(loader);}catch(Throwable e){error[0]=e;}}});
-        if(error[0]!=null)throw new RuntimeException(error[0]);
+        testModernMenu(context,loader);
         Class<?> game=Class.forName("com.naruto.port.NarutoActivity",true,loader);
         Method stretch=game.getDeclaredMethod("applyStretch",boolean.class);stretch.setAccessible(true);
         // Deliberately unattached: execution must fail at Context access, never ART verification.
@@ -147,48 +138,29 @@ public final class R2Instrumentation extends Instrumentation {
         runOnMainSync(()->{try{Object instance=game.getConstructor().newInstance();try{stretch.invoke(instance,false);throw new AssertionError("Unattached Activity unexpectedly ran");}catch(java.lang.reflect.InvocationTargetException expected){check(expected.getCause() instanceof NullPointerException,"Patched game screen method verifies before reaching its Context dependency");}}catch(Throwable e){verifierError[0]=e;}});
         if(verifierError[0]!=null)throw new RuntimeException(verifierError[0]);
     }
-    private static MotionEvent event(int action,int[] ids,float[] xs,float[] ys){
-        MotionEvent.PointerProperties[] props=new MotionEvent.PointerProperties[ids.length];
-        MotionEvent.PointerCoords[] coords=new MotionEvent.PointerCoords[ids.length];
-        for(int i=0;i<ids.length;i++){props[i]=new MotionEvent.PointerProperties();props[i].id=ids[i];props[i].toolType=MotionEvent.TOOL_TYPE_FINGER;coords[i]=new MotionEvent.PointerCoords();coords[i].x=xs[i];coords[i].y=ys[i];coords[i].pressure=1;coords[i].size=1;}
-        long t=SystemClock.uptimeMillis();return MotionEvent.obtain(t,t,action,ids.length,props,coords,0,0,1,1,0,0,android.view.InputDevice.SOURCE_TOUCHSCREEN,0);
-    }
-    private void send(View view,int action,int[] ids,float[] xs,float[] ys){MotionEvent e=event(action,ids,xs,ys);view.onTouchEvent(e);e.recycle();}
-    private void testTouch(ClassLoader loader)throws Exception {
-        Class<?> callback=Class.forName("a.d0",true,loader),overlay=Class.forName("a.f0",true,loader);
-        final int[] output=new int[7];
-        Object listener=java.lang.reflect.Proxy.newProxyInstance(loader,new Class<?>[]{callback},(proxy,method,args)->{if(method.getName().equals("c")&&args!=null&&args.length==7)for(int i=0;i<7;i++)output[i]=((Integer)args[i]);return null;});
-        View control=(View)overlay.getConstructor(Activity.class,callback).newInstance(launcher,listener);control.layout(0,0,1600,720);
-        Object right=overlay.getField("x").get(control);Class<?> stick=right.getClass();
-        send(control,MotionEvent.ACTION_DOWN,new int[]{0},new float[]{900},new float[]{620});
-        check(stick.getField("a").getInt(right)==0,"A free touch on the right half captures the invisible stick");
-        check(output[3]==0&&output[4]==0,"Floating right stick starts neutral at the touch origin");
-        send(control,MotionEvent.ACTION_MOVE,new int[]{0},new float[]{1000},new float[]{590});
-        check(output[3]>0&&output[4]>0,"Right-stick movement reaches the existing game input callback");
-        send(control,MotionEvent.ACTION_MOVE,new int[]{0},new float[]{700},new float[]{620});
-        check(stick.getField("a").getInt(right)==0&&output[3]<0,"Captured right finger retains its role across the center");
-        send(control,MotionEvent.ACTION_UP,new int[]{0},new float[]{700},new float[]{620});
-        check(output[3]==0&&output[4]==0&&stick.getField("a").getInt(right)==-1,"Lifting a finger resets right axes and releases capture");
-        send(control,MotionEvent.ACTION_DOWN,new int[]{0},new float[]{316.8f},new float[]{576});
-        send(control,MotionEvent.ACTION_POINTER_DOWN|(1<<MotionEvent.ACTION_POINTER_INDEX_SHIFT),new int[]{0,1},new float[]{316.8f,900},new float[]{576,620});
-        send(control,MotionEvent.ACTION_MOVE,new int[]{0,1},new float[]{350,980},new float[]{570,590});
-        check(output[1]!=0&&output[3]!=0,"Left and right sticks work simultaneously with independent pointers");
-        send(control,MotionEvent.ACTION_POINTER_UP|(1<<MotionEvent.ACTION_POINTER_INDEX_SHIFT),new int[]{0,1},new float[]{350,980},new float[]{570,590});
-        check(output[1]!=0&&output[3]==0&&output[4]==0,"Releasing the right finger leaves left-stick movement intact");
-        send(control,MotionEvent.ACTION_CANCEL,new int[]{0},new float[]{350},new float[]{570});
-        check(output[1]==0&&output[2]==0&&output[3]==0&&output[4]==0,"Cancel clears both sticks without stuck input");
-        send(control,MotionEvent.ACTION_DOWN,new int[]{0},new float[]{1456},new float[]{532.8f});
-        check((output[0]&8192)!=0&&stick.getField("a").getInt(right)==-1,"Existing attack button takes priority over invisible look input");
-        send(control,MotionEvent.ACTION_UP,new int[]{0},new float[]{1456},new float[]{532.8f});
-        check(output[0]==0,"Button release remains correct");
-        launcher.getSharedPreferences("naruto",0).edit().putBoolean("r2_touch_right",false).commit();
-        send(control,MotionEvent.ACTION_DOWN,new int[]{0},new float[]{900},new float[]{620});
-        check(stick.getField("a").getInt(right)==-1,"Invisible right stick can be disabled");
-        send(control,MotionEvent.ACTION_CANCEL,new int[]{0},new float[]{900},new float[]{620});
-        launcher.getSharedPreferences("naruto",0).edit().remove("r2_touch_right").commit();
-        android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(1600,720,android.graphics.Bitmap.Config.ARGB_8888);
-        control.draw(new android.graphics.Canvas(bitmap));
-        check(bitmap.getPixel(900,620)==0,"Right-stick touch area has no visible gameplay artwork");bitmap.recycle();
+    private View named(List<View> views,String text){for(View v:views)if(v instanceof TextView&&text.contentEquals(((TextView)v).getText()))return v;return null;}
+    private void testModernMenu(Context context,ClassLoader loader)throws Exception {
+        for(String retired:new String[]{"Haptics","FrameGraph","RightInput","ControllerUi","ControllerInput"}){try{Class.forName("com.naruto.r2."+retired,true,loader);throw new AssertionError("Retired class present "+retired);}catch(ClassNotFoundException expected){check(true,"Retired runtime removed: "+retired);}}
+        Class<?> menu=Class.forName("com.naruto.r2.GameMenu",true,loader),actions=Class.forName("com.naruto.r2.GameMenu$Actions",true,loader);
+        final java.util.List<String> calls=new java.util.ArrayList<>();Object listener=java.lang.reflect.Proxy.newProxyInstance(loader,new Class<?>[]{actions},(proxy,m,args)->{calls.add(m.getName());return null;});
+        final android.app.AlertDialog[] dialog=new android.app.AlertDialog[1];final Throwable[] error=new Throwable[1];
+        runOnMainSync(()->{try{dialog[0]=(android.app.AlertDialog)menu.getMethod("open",Activity.class,actions).invoke(null,launcher,listener);List<View> views=new ArrayList<>();collect(dialog[0].getWindow().getDecorView(),views);
+            check(hasText(views,"Game options")&&hasText(views,"Return to launcher")&&hasText(views,"Resume"),"Modern game menu exposes resume and launcher return");
+            check(hasText(views,"Control opacity")&&hasText(views,"Brightness")&&hasText(views,"Touch controls"),"Expanded game menu contains live controls");
+            check(!hasText(views,"Rumble")&&!hasText(views,"Performance history")&&!hasText(views,"Export diagnostics"),"Removed features do not appear in the game menu");
+            View fps=named(views,"Show FPS");((View)fps.getParent()).performClick();check(calls.contains("stats"),"Game-menu FPS switch invokes its action");
+        }catch(Throwable e){error[0]=e;}});if(error[0]!=null)throw new RuntimeException(error[0]);
+        waitForIdleSync();screenshot(context,"game-menu");runOnMainSync(()->dialog[0].getButton(-1).performClick());waitForIdleSync();
+        check(!dialog[0].isShowing(),"Resume closes the game menu");
+        final int[] exits={0};
+        runOnMainSync(()->{try{dialog[0]=(android.app.AlertDialog)menu.getMethod("confirmExit",Activity.class,Runnable.class).invoke(null,launcher,(Runnable)()->exits[0]++);check(dialog[0].isShowing(),"Exit confirmation opens before leaving");dialog[0].getButton(-2).performClick();check(exits[0]==0,"Cancelling exit keeps the game running");}catch(Throwable e){error[0]=e;}});if(error[0]!=null)throw new RuntimeException(error[0]);
+        waitForIdleSync();
+        runOnMainSync(()->{try{dialog[0]=(android.app.AlertDialog)menu.getMethod("confirmExit",Activity.class,Runnable.class).invoke(null,launcher,(Runnable)()->exits[0]++);dialog[0].getButton(-1).performClick();}catch(Throwable e){error[0]=e;}});if(error[0]!=null)throw new RuntimeException(error[0]);waitForIdleSync();check(exits[0]==1,"Confirmed launcher return invokes shutdown exactly once");
+        final SharedPreferences prefs=context.getSharedPreferences("naruto",0);java.util.Map<String,?> original=new java.util.HashMap<>(prefs.getAll());
+        Class.forName("com.naruto.r2.Performance",true,loader).getMethod("balanced",Activity.class,int.class).invoke(null,launcher,3);
+        check(prefs.getInt("menu_resolution_v5",0)==3&&prefs.getInt("menu_antialiasing",0)==1&&prefs.getInt("menu_framegen_mode",1)==0&&prefs.getInt("menu_screen_hz",-1)==0,"Balanced 720p writes lighter graphics and automatic display settings");
+        Class.forName("com.naruto.r2.Performance",true,loader).getMethod("balanced",Activity.class,int.class).invoke(null,launcher,4);check(prefs.getInt("menu_resolution_v5",0)==4,"Balanced 900p is selectable");
+        SharedPreferences.Editor edit=prefs.edit().clear();for(java.util.Map.Entry<String,?> e:original.entrySet()){Object v=e.getValue();if(v instanceof String)edit.putString(e.getKey(),(String)v);else if(v instanceof Integer)edit.putInt(e.getKey(),(Integer)v);else if(v instanceof Float)edit.putFloat(e.getKey(),(Float)v);else if(v instanceof Boolean)edit.putBoolean(e.getKey(),(Boolean)v);else if(v instanceof Long)edit.putLong(e.getKey(),(Long)v);}edit.commit();
     }
     @Override public void onStart() {
         Thread watchdog=new Thread(()->{try{Thread.sleep(120000);}catch(InterruptedException done){return;}if(completed)return;StringBuilder trace=new StringBuilder();for(java.util.Map.Entry<Thread,StackTraceElement[]> entry:Thread.getAllStackTraces().entrySet())if(entry.getKey().getName().equals("main")||entry.getKey().getName().contains("Instr")){trace.append(entry.getKey().getName()).append('\n');int n=0;for(StackTraceElement frame:entry.getValue()){trace.append(frame).append('\n');if(++n==12)break;}}Bundle status=new Bundle();status.putString("stream",trace+"R2_STALL_STAGE="+lastProgress+"\n");sendStatus(1,status);},"R2-watchdog");watchdog.setDaemon(true);watchdog.start();
@@ -226,8 +198,6 @@ public final class R2Instrumentation extends Instrumentation {
             emit.invoke(null,"R1_NATIVE_TEST","R1_LOGGING_ON_MARKER");
             trace.invoke(null,new RuntimeException("R1_STACK_ON_MARKER"));
             stderr.invoke(null,System.err,"R1_STDERR_ON_MARKER");
-            Class<?> exportUi=Class.forName("com.naruto.r2.LauncherUi",true,loader);Method report=exportUi.getDeclaredMethod("report",launcher.getClass());report.setAccessible(true);
-            String enabledReport=(String)report.invoke(null,launcher);check(enabledReport.contains("R1_LOGGING_ON_MARKER"),"On-demand diagnostics includes enabled app logs");
             Class<?> sdl=Class.forName("org.libsdl.app.SDL",true,loader);
             Method load=sdl.getMethod("loadLibrary",String.class,Context.class);
             progress("Loading the actual upstream ffmpeg/main libraries without starting gameplay");
@@ -241,7 +211,6 @@ public final class R2Instrumentation extends Instrumentation {
             emit.invoke(null,"R1_NATIVE_TEST","R1_LOGGING_OFF_MARKER");
             trace.invoke(null,new RuntimeException("R1_STACK_OFF_MARKER"));
             stderr.invoke(null,System.err,"R1_STDERR_OFF_MARKER");
-            String disabledReport=(String)report.invoke(null,launcher);check(disabledReport.contains("no logs were collected")&&!disabledReport.contains("R1_LOGGING_ON_MARKER"),"Diagnostics with Logging off does not collect old app logs");
             prefs.edit().putBoolean("menu_ptbr",true).commit();
             final Throwable[] writeError=new Throwable[1];
             runOnMainSync(new Runnable(){public void run(){

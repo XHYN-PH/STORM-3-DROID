@@ -11,27 +11,29 @@ import java.nio.file.*;
 import java.util.*;
 
 public final class GameHooks {
+    public static boolean active=true,preparationDone,returnToLauncher;
     private static RandomAccessFile gameLockFile;
     private static FileLock gameLock;
     public static SharedPreferences prefs(Context c){return c.getSharedPreferences("naruto",0);}
-    public static void beforeLauncher(Activity a){if(!a.getIntent().hasExtra("trailer"))a.getIntent().putExtra("trailer",prefs(a).getBoolean("r2_video",true));}
+    public static void beforeLauncher(Activity a){prefs(a).edit().remove("r2_graph").remove("r2_rumble").remove("r2_rumble_strength").remove("r2_touch_right").remove("r2_touch_gain").remove("r2_left_deadzone").remove("r2_right_deadzone").remove("r2_right_axes").remove("r2_right_invert").remove("r2_ps_labels").apply();if(!a.getIntent().hasExtra("trailer"))a.getIntent().putExtra("trailer",prefs(a).getBoolean("r2_video",true));}
     public static void gameStart(Activity a){
+        active=true;preparationDone=false;returnToLauncher=false;
         try{gameLockFile=new RandomAccessFile(new File(a.getFilesDir(),"r2-game.lock"),"rw");gameLock=gameLockFile.getChannel().tryLock();
             if(gameLock==null)throw new IOException("A save operation is in progress. Close and reopen the game after it finishes.");
         }catch(IOException|OverlappingFileLockException e){try{if(gameLockFile!=null)gameLockFile.close();}catch(IOException ignored){}gameLockFile=null;gameLock=null;android.widget.Toast.makeText(a,"Save management is in progress. Try starting the game again when it finishes.",android.widget.Toast.LENGTH_LONG).show();a.finish();}
     }
-    public static void gameStop(Activity a){Haptics.stop(a,-1);try{if(gameLock!=null)gameLock.release();}catch(IOException ignored){}try{if(gameLockFile!=null)gameLockFile.close();}catch(IOException ignored){}gameLock=null;gameLockFile=null;}
+    public static void gameStop(Activity a){active=false;try{if(gameLock!=null)gameLock.release();}catch(IOException ignored){}try{if(gameLockFile!=null)gameLockFile.close();}catch(IOException ignored){}gameLock=null;gameLockFile=null;if(returnToLauncher){returnToLauncher=false;a.startActivity(new Intent(a,com.naruto.port.LauncherActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP));}}
+    public static void refreshPrefs(Activity a){a.getSharedPreferences("naruto",4).getAll();}
     public static void gameReady(final Activity a){
         if(a.isFinishing())return;
+        if(a instanceof com.naruto.port.NarutoActivity)GameMenu.applyTouch((com.naruto.port.NarutoActivity)a);
         final SharedPreferences p=prefs(a);
         final View surface=findSurface(a.getWindow().getDecorView());
         if(surface!=null)surface.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->applyCrop(surface,p.getInt("r2_screen",0),p.getInt("r2_crop",100)));
         if(surface!=null)surface.post(()->applyCrop(surface,p.getInt("r2_screen",0),p.getInt("r2_crop",100)));
-        if(p.getBoolean("r2_graph",false)){
-            FrameGraph graph=new FrameGraph(a);android.widget.FrameLayout.LayoutParams lp=new android.widget.FrameLayout.LayoutParams(dp(a,260),dp(a,90),Gravity.TOP|Gravity.CENTER_HORIZONTAL);
-            lp.topMargin=dp(a,8);a.addContentView(graph,lp);
-        }
+
     }
+    public static void updateCrop(Activity a){View v=findSurface(a.getWindow().getDecorView());if(v!=null)applyCrop(v,prefs(a).getInt("r2_screen",0),prefs(a).getInt("r2_crop",100));}
     public static void stockScreen(Activity a,boolean stretch){prefs(a).edit().putInt("r2_screen",stretch?1:0).apply();View v=findSurface(a.getWindow().getDecorView());if(v!=null)applyCrop(v,stretch?1:0,100);}
     public static int dp(Context c,float v){return Math.round(c.getResources().getDisplayMetrics().density*v);}
     private static View findSurface(View v){if(v instanceof SurfaceView)return v;if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++){View found=findSurface(g.getChildAt(i));if(found!=null)return found;}}return null;}

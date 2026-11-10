@@ -2,23 +2,28 @@
 
 Modified and Translated by **XHYN_PH**.
 
-R2 keeps the stock launcher and adds one compact **More options** card. Its dialogs reuse the original cards, animated switches and button styling. The existing controller mapping screen gains a controller diagram, live input feedback, reset actions and a switch back to the original list.
+R2 keeps the launcher layout and stock controller mapping screen, with a shared dark Material theme, rounded dialogs and gold accents. Added settings stay in one compact **More options** card.
 
 ## Included
 
-- STORM 3 app name and circular gold Leaf icon.
-- Invisible floating right stick: touch an unused part of the right half to establish its origin, then drag. Buttons win hit testing. Fingers retain their roles across the center; releasing/cancelling returns the stick to neutral.
-- Global controller dead zones, right-Y inversion and right-axis-pair selection; live stick/button/trigger feedback and R3 mapping/reset in the existing controller screen.
-- SDL feedback routing to phone/controller, adjustable strength, stop handling and a motor-test action.
-- Proportional fullscreen crop, with adjustable amount; original Fit and Stretch remain.
-- Opening-video preference, gamma control, shadow cap presets and Auto/manual GPU-memory/streaming-cache choices. The configuration writer applies these after generating stock defaults.
-- Save ZIP export/share, backup creation, export, restore and deletion.
-- Driver information/system-driver reset and on-demand diagnostics export. When logging is off, diagnostics does not collect logs.
-- Optional game/output FPS history. Frame-time values are **estimates from the engine's one-second FPS samples**, not individual Vulkan frame timings. Missing generated-output measurements remain unknown.
+- STORM 3 name and circular gold Leaf icon.
+- Balanced 720p / 900p starting presets: FXAA, FSR, 2× frame generation with Performance flow, and automatic display refresh. Existing main settings remain editable.
+- Auto refresh chooses a display mode suited to generated output, preferring a lower matching refresh over a higher one. Manual refresh selections remain available.
+- Hidden FPS statistics no longer trigger native statistics or memory polling. Completed loading preparation stops polling. Game pause/destruction cancels polling and resume restarts only needed tasks.
+- Launcher ambient/logo animation pauses while the launcher is hidden. Drawing loops stop scheduling when hidden, and animation resumes when the launcher returns.
+- Original cached SDL motion ranges and original axis behavior, with allocation-free joystick lookup. No added calibration per axis/event.
+- Rounded in-game options: Fit / Stretch / Crop, Show FPS, touch visibility, touch with controller, opacity, brightness, touch-layout editing, menu-button visibility, and confirmed return to launcher.
+- Proportional fullscreen crop with adjustable amount; original Fit and Stretch remain.
+- Opening-video preference, gamma, shadow cap, GPU-memory and streaming-cache choices; overrides run after the stock config writer.
+- Save ZIP export/share and backup create/export/restore/delete; driver information and system-driver reset.
 
-Controller profiles, settings backup, shader-prewarming controls and touch-layout profiles are excluded as requested. Existing features are retained.
+Added rumble, invisible right stick, axis calibration, controller preview/reset, performance history and diagnostics export have been removed. Touch input, controller mappings, SDL haptics and the original FPS widget are restored to R1 source exactly. The original controller binding list still includes its stock L3/R3 bindings.
 
-Game-start settings apply on the next game launch. Reopen the launcher to apply the opening-video preference. The controller tester shows raw device values; calibration is applied to the game input path.
+The game menu applies only controls supported at runtime. Settings in the launcher apply on the next game launch. Reopen the launcher for the opening-video preference.
+
+## Returning to the launcher
+
+Wait for the game's save indicator to finish, then select **Return to launcher** and confirm. Input is released, polling stops, and Android/SDL performs its normal activity and native shutdown. The save lock is released after shutdown before the launcher is opened. This does not force-kill the game process or create a manual save; unsaved progress can be lost.
 
 ## Save protection
 
@@ -48,10 +53,10 @@ python3 r1/build_r1.py --r2 \
 
 `compile_runtime.py` compiles the added Java classes using signature-only stubs for upstream classes. Those stubs are excluded from the DEX. Apktool disassembles the runtime and `customize.py` applies checked hooks to the translated base. All engine executable sections, bundled data and notices remain protected by source verification. R1 builds keep their original defaults unless `--r2` is explicitly supplied.
 
-## Investigation and testing limits
+## Testing limits
 
-PT4Droid's touch implementation was reviewed as requested. Its native camera-delta interface is game-specific; STORM uses its existing gamepad right-axis bridge instead. Genuine ultrawide rendering was not established: presentation aspect/crop settings do not change the game's camera or HUD. R2 supplies crop rather than advertising an unsupported expanded camera view.
+Actual FPS gains depend on the device, scene and selected driver. Presets reduce graphics work; the engine stays binary-only and no 60 FPS gameplay unlock is claimed. Crop fills the display by cropping the image; it does not widen the game camera/HUD.
 
-The stock Xbox axis/R3 event path exists. R2 adds calibration, selectable axis sources, a live tester and mapping resets, but physical Xbox compatibility and actual gameplay-triggered rumble still require a phone/controller and game-data test. The rumble test confirms motor access separately from the engine producing rumble events. See [TESTING.md](TESTING.md) for completed checks and outstanding results.
+See [TESTING.md](TESTING.md) for the exact automated coverage and outstanding device checks. Gameplay shutdown/save completion, Xbox behavior and physical Adreno/Turnip presentation require game-data testing on a phone.
 
-The engine remains binary-only. Original R2 Java, scripts and tests are MIT-licensed; upstream rights and notices remain unchanged.
+Original R2 Java, scripts and tests are MIT-licensed; upstream rights and notices remain unchanged.

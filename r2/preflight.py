@@ -21,14 +21,17 @@ decoded=work/'preflight-decoded';shutil.rmtree(decoded,ignore_errors=True);shuti
 run(sys.executable,ROOT/'customize.py',decoded)
 # Parameters in these stock methods are deliberately reused; their hooks must run before that reuse.
 for relative,signature,needle in [
- ('com/naruto/port/NarutoActivity.smali','.method private applyStretch(Z)V','GameHooks;->stockScreen'),
- ('a/a0.smali','.method public setValues([F)V','FrameGraph;->sample')]:
+ ('com/naruto/port/NarutoActivity.smali','.method private applyStretch(Z)V','GameHooks;->stockScreen')]:
  source=(decoded/'smali'/relative).read_text();body=re.search(re.escape(signature)+r'\n.*?^\.end method$',source,re.M|re.S).group()
  before_hook=body.split(needle,1)[0]
  if re.search(r'^    (?:iget[^ ]*|move-result[^ ]*|const[^ ]*) p[01](?:,|$)',before_hook,re.M):raise AssertionError('Hook uses a clobbered stock parameter: '+relative)
 run(sys.executable,ROOT.parent/'r1/verify_sources.py','--original',a.upstream,'--decoded',decoded,'--version-name','R2','--version-code','48')
 # No excluded feature should be exposed under another label.
 code='\n'.join(f.read_text() for f in (ROOT/'src').rglob('*.java'))
-for unsupported in ['shader_prewarm','controller_profile','layout_profile','settings_backup']:
+for unsupported in ['shader_prewarm','controller_profile','layout_profile','settings_backup','Export diagnostics','Performance history','class RightInput','class Haptics','class ControllerUi','class FrameGraph','class ControllerInput']:
  if unsupported in code:raise AssertionError('Excluded feature found: '+unsupported)
+# Rollbacks are byte-for-byte equal to the verified R1 source.
+for relative in ['a/f0.smali','a/a0.smali','com/naruto/port/ControllerMapActivity.smali','org/libsdl/app/SDLControllerManager.smali']:
+ if (decoded/'smali'/relative).read_bytes()!=(a.r1_decoded/'smali'/relative).read_bytes():raise AssertionError('Stock rollback changed: '+relative)
+print('PASS: stock touch, mapping, haptics and FPS widget restored exactly.')
 print('PASS: R2 source preflight complete. No distributable APK has been assembled by this command.')

@@ -1,0 +1,20 @@
+/* Copyright (c) 2026 XHYN_PH. SPDX-License-Identifier: MIT */
+package com.naruto.r2;
+import android.os.SystemClock;
+import android.view.*;
+import com.naruto.port.NarutoActivity;
+
+/** Poll only while useful; lifecycle hooks stop and resume the existing tasks. */
+public final class GameLoop {
+ public static boolean tick(int kind,KeyEvent.Callback owner){if(kind!=0&&kind!=1)return false;NarutoActivity a=(NarutoActivity)owner;if(a.isFinishing()||a.isDestroyed()||!GameHooks.active)return true;
+  if(kind==1){if(GameHooks.prefs(a).getBoolean("menu_stats",true))try{a.statsView.setValues(NarutoActivity.nativeStatsValues());a.statsHandler.postDelayed(a.statsUpdater,1000);}catch(UnsatisfiedLinkError ignored){}else a.statsView.setValues(null);return true;}
+  try{int[] state=NarutoActivity.nativeShaderPrepare();int done=state!=null&&state.length>=2?state[0]:0,total=state!=null&&state.length>=2?state[1]:0;
+   if(total>0&&done<total){a.prepareSeen=true;a.preparePanel.setVisibility(View.VISIBLE);a.prepareBar.setMax(total);a.prepareBar.setProgress(Math.max(0,done));a.prepareCount.setText(done+" of "+total+"  ("+(Math.max(0,done)*100L/total)+"%)");}
+   else if((total>0&&done>=total)||a.prepareSeen||SystemClock.uptimeMillis()-a.prepareStarted>20000){a.preparePanel.setVisibility(View.GONE);GameHooks.preparationDone=true;return true;}
+   a.statsHandler.postDelayed(a.prepareUpdater,250);
+  }catch(UnsatisfiedLinkError ignored){GameHooks.preparationDone=true;}
+  return true;
+ }
+ public static void resume(NarutoActivity a){GameHooks.refreshPrefs(a);GameHooks.active=true;if(a.statsView==null)return;a.statsHandler.removeCallbacks(a.statsUpdater);if(GameHooks.prefs(a).getBoolean("menu_stats",true))a.statsHandler.post(a.statsUpdater);else a.statsView.setValues(null);a.statsHandler.removeCallbacks(a.prepareUpdater);if(!GameHooks.preparationDone&&a.preparePanel!=null)a.statsHandler.post(a.prepareUpdater);}
+ public static void pause(NarutoActivity a){GameHooks.active=false;a.statsHandler.removeCallbacks(a.statsUpdater);a.statsHandler.removeCallbacks(a.prepareUpdater);}
+}

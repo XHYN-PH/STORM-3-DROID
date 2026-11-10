@@ -33,57 +33,61 @@ def customize(root):
     return-void
 
     :r2_original_result'''))
- change(game,'.method public onCreate(Landroid/os/Bundle;)V',lambda b:returns(start(b,call('GameHooks','gameStart(Landroid/app/Activity;)V')),call('GameHooks','gameReady(Landroid/app/Activity;)V')))
+ def game_create(body):
+  needle='    invoke-super {p0, p1}, Lorg/libsdl/app/SDLActivity;->onCreate(Landroid/os/Bundle;)V'
+  if body.count(needle)!=1:raise ValueError('Game framework creation changed')
+  hook=needle+'\n'+call('GameHooks','gameStart(Landroid/app/Activity;)V')+'\n    invoke-virtual/range {p0 .. p0}, Landroid/app/Activity;->isFinishing()Z\n    move-result v0\n    if-eqz v0, :r2_game_lock_ok\n    return-void\n    :r2_game_lock_ok'
+  return returns(body.replace(needle,hook),call('GameHooks','gameReady(Landroid/app/Activity;)V'))
+ change(game,'.method public onCreate(Landroid/os/Bundle;)V',game_create)
  change(game,'.method public onDestroy()V',lambda b:returns(b,call('GameHooks','gameStop(Landroid/app/Activity;)V')))
  # Keep the stock in-game Fit/Stretch menu authoritative when used.
  change(game,'.method private applyStretch(Z)V',lambda b:start(b,call('GameHooks','stockScreen(Landroid/app/Activity;Z)V',1)))
- def acquire(body):
-  needle='    :goto_c\n    if-ne v3, v4, :cond_1a'
-  if body.count(needle)!=1:raise ValueError('Unexpected touch pointer-acquisition block')
-  return body.replace(needle,'    :goto_c\n'+call('RightInput','acquire(La/f0;Landroid/view/MotionEvent;)V',1)+'\n\n    if-ne v3, v4, :cond_1a')
- change(touch,'.method public final onTouchEvent(Landroid/view/MotionEvent;)Z',acquire)
- def draw(body):
-  needle='    invoke-virtual {v7, v2, v1, v3, v9}, Landroid/graphics/Canvas;->drawCircle(FFFLandroid/graphics/Paint;)V'
-  if body.count(needle)!=1:raise ValueError('Unexpected dormant right-stick indicator')
-  return returns(body.replace(needle,'    # Right stick stays invisible during gameplay.'),call('RightInput','drawEditor(La/f0;Landroid/graphics/Canvas;)V',1))
- change(touch,'.method public final onDraw(Landroid/graphics/Canvas;)V',draw)
- source=touch.read_text();old='.method public final h(La/e0;FFF)V';assert source.count(old)==1;source=source.replace(old,'.method public final r2OriginalUpdate(La/e0;FFF)V')
- source+='''
-.method public final h(La/e0;FFF)V
-    .locals 1
-    invoke-static/range {p0 .. p4}, Lcom/naruto/r2/RightInput;->update(La/f0;La/e0;FFF)Z
-    move-result v0
-    if-nez v0, :r2_done
-    invoke-virtual/range {p0 .. p4}, La/f0;->r2OriginalUpdate(La/e0;FFF)V
-    :r2_done
-    return-void
-.end method
-
-.method public onWindowFocusChanged(Z)V
-    .locals 0
-    invoke-super {p0, p1}, Landroid/view/View;->onWindowFocusChanged(Z)V
-    if-nez p1, :r2_focused
-    invoke-static {p0}, Lcom/naruto/r2/RightInput;->release(La/f0;)V
-    :r2_focused
-    return-void
-.end method
-''';touch.write_text(source)
- change(controller,'.method public final onCreate(Landroid/os/Bundle;)V',lambda b:returns(b,call('ControllerUi','install(Lcom/naruto/port/ControllerMapActivity;)V')))
- change(controller,'.method public final dispatchGenericMotionEvent(Landroid/view/MotionEvent;)Z',lambda b:start(b,call('ControllerUi','onMotion(Lcom/naruto/port/ControllerMapActivity;Landroid/view/MotionEvent;)V',1)))
- change(controller,'.method public final dispatchKeyEvent(Landroid/view/KeyEvent;)Z',lambda b:start(b,call('ControllerUi','onKey(Lcom/naruto/port/ControllerMapActivity;Landroid/view/KeyEvent;)V',1)))
- joystick=smali/'org/libsdl/app/SDLJoystickHandler_API16.smali';text=joystick.read_text()
- text,n=re.subn(r'invoke-virtual (\{[^}]+\}), Landroid/view/MotionEvent;->getAxisValue\(II\)F',r'invoke-static \1, Lcom/naruto/r2/ControllerInput;->axisValue(Landroid/view/MotionEvent;II)F',text)
- if n<1:raise ValueError('SDL axis normalization path not found')
- joystick.write_text(text)
- manager=smali/'org/libsdl/app/SDLControllerManager.smali'
- for name,types,target in [('hapticRumble','IFFI','rumble'),('hapticRun','IFI','run'),('hapticStop','I','stop')]:
-  signature=f'.method public static {name}({types})V';last=len(types)-1
-  change(manager,signature,lambda b,s=signature,t=types,l=last,f=target:s+'\n    .locals 0\n    invoke-static/range {p0 .. p'+str(l)+'}, Lcom/naruto/r2/Haptics;->'+f+'('+t+')V\n    return-void\n.end method')
- change(smali/'a/a0.smali','.method public setValues([F)V',lambda b:start(b,'    invoke-static/range {p1 .. p1}, Lcom/naruto/r2/FrameGraph;->sample([F)V'))
+ # Original touch layout, physical axes, R3 and mapping UI remain untouched.
+ # Stock SDL already caches motion ranges; avoid an Iterator allocation on each lookup.
+ joystick=smali/'org/libsdl/app/SDLJoystickHandler_API16.smali'
+ change(joystick,'.method public getJoystick(I)Lorg/libsdl/app/SDLJoystickHandler_API16$SDLJoystick;',lambda b:'.method public getJoystick(I)Lorg/libsdl/app/SDLJoystickHandler_API16$SDLJoystick;\n    .locals 4\n    iget-object v0, p0, Lorg/libsdl/app/SDLJoystickHandler_API16;->mJoysticks:Ljava/util/ArrayList;\n    const/4 v1, 0x0\n    :r2_lookup\n    invoke-virtual {v0}, Ljava/util/ArrayList;->size()I\n    move-result v2\n    if-ge v1, v2, :r2_missing\n    invoke-virtual {v0, v1}, Ljava/util/ArrayList;->get(I)Ljava/lang/Object;\n    move-result-object v2\n    check-cast v2, Lorg/libsdl/app/SDLJoystickHandler_API16$SDLJoystick;\n    iget v3, v2, Lorg/libsdl/app/SDLJoystickHandler_API16$SDLJoystick;->device_id:I\n    if-eq v3, p1, :r2_found\n    add-int/lit8 v1, v1, 0x1\n    goto :r2_lookup\n    :r2_found\n    return-object v2\n    :r2_missing\n    const/4 v2, 0x0\n    return-object v2\n.end method')
+ # Bridge private methods without changing their dispatch kind at existing call sites.
+ source=game.read_text()
+ fields=['controls','preferences','prepareBar','prepareCount','preparePanel','prepareSeen','prepareStarted','prepareUpdater','shadowPanel','statsHandler','statsUpdater','statsView','surfaceFrameRate']
+ for field in fields:
+  source,n=re.subn(r'^\.field private (final )?('+field+r':)',r'.field public \1\2',source,flags=re.M)
+  if n!=1:raise ValueError('Missing game field '+field)
+ for name in ['nativeStatsValues','nativeShadowSet']:
+  source,n=re.subn(r'^\.method private static native ('+name+r'\()',r'.method public static native \1',source,flags=re.M)
+  if n!=1:raise ValueError('Missing native bridge '+name)
+ for method,types in [('applyStretch','Z'),('applyControllerMode','')]:
+  source+=f"\n.method public r2{method[0].upper()+method[1:]}({types})V\n    .locals 0\n    invoke-direct/range {{p0 .. p{len(types)}}}, Lcom/naruto/port/NarutoActivity;->{method}({types})V\n    return-void\n.end method\n"
+ source+='\n.method public onPause()V\n    .locals 0\n    invoke-static {p0}, Lcom/naruto/r2/GameLoop;->pause(Lcom/naruto/port/NarutoActivity;)V\n    invoke-super {p0}, Lorg/libsdl/app/SDLActivity;->onPause()V\n    return-void\n.end method\n.method public onResume()V\n    .locals 0\n    invoke-super {p0}, Lorg/libsdl/app/SDLActivity;->onResume()V\n    invoke-static {p0}, Lcom/naruto/r2/GameLoop;->resume(Lcom/naruto/port/NarutoActivity;)V\n    return-void\n.end method\n'
+ game.write_text(source)
+ change(game,'.method private requestRefreshRate(II)V',lambda b:'.method private requestRefreshRate(II)V\n    .locals 0\n'+call('Performance','refresh(Lcom/naruto/port/NarutoActivity;II)V',2)+'\n    return-void\n.end method')
+ change(game,'.method public onBackPressed()V',lambda b:'.method public onBackPressed()V\n    .locals 0\n'+call('GameMenu','back(Lcom/naruto/port/NarutoActivity;)V')+'\n    return-void\n.end method')
+ # The original method reuses p0 for the emblem. Keep the Activity in a wrapper.
+ source=game.read_text().replace('.method private applyControllerMode()V','.method private r2OriginalControllerMode()V')
+ source+='\n.method private applyControllerMode()V\n    .locals 0\n    invoke-direct {p0}, Lcom/naruto/port/NarutoActivity;->r2OriginalControllerMode()V\n    invoke-static {p0}, Lcom/naruto/r2/GameMenu;->applyTouch(Lcom/naruto/port/NarutoActivity;)V\n    return-void\n.end method\n'
+ game.write_text(source)
+ change(game,'.method public onDestroy()V',lambda b:start(b,call('GameLoop','pause(Lcom/naruto/port/NarutoActivity;)V')))
+ change(smali/'a/Y.smali','.method public final onTouch(Landroid/view/View;Landroid/view/MotionEvent;)Z',lambda b:'.method public final onTouch(Landroid/view/View;Landroid/view/MotionEvent;)Z\n    .locals 1\n    iget-object v0, p0, La/Y;->f:La/Z;\n    invoke-static {v0, p1, p2}, Lcom/naruto/r2/GameMenu;->touch(La/Z;Landroid/view/View;Landroid/view/MotionEvent;)Z\n    move-result v0\n    return v0\n.end method')
+ change(smali/'a/L.smali','.method public final run()V',lambda b:start(b,'    iget v0, p0, La/L;->a:I\n    iget-object v1, p0, La/L;->b:Landroid/view/KeyEvent$Callback;\n    invoke-static {v0, v1}, Lcom/naruto/r2/GameLoop;->tick(ILandroid/view/KeyEvent$Callback;)Z\n    move-result v0\n    if-eqz v0, :r2_stock_tick\n    return-void\n    :r2_stock_tick'))
+ # Retain minimal animations while visible, suspend every repeating launcher animator while hidden.
+ source=launcher.read_text();needle='    invoke-virtual {v0}, Landroid/animation/ObjectAnimator;->start()V'
+ if source.count(needle)!=1:raise ValueError('Logo animator changed')
+ launcher.write_text(source.replace(needle,needle+'\n    invoke-static {v0}, Lcom/naruto/r2/LauncherMotion;->registerAnimator(Landroid/animation/Animator;)V'))
+ for method,target in [('onPause','pause'),('onResume','resume')]:
+  change(launcher,'.method public final '+method+'()V',lambda b,t=target:start(b,call('LauncherMotion',t+'(Landroid/app/Activity;)V')))
+ with launcher.open('a') as out:out.write('\n.method public onDestroy()V\n    .locals 0\n    invoke-static {p0}, Lcom/naruto/r2/LauncherMotion;->destroy(Landroid/app/Activity;)V\n    invoke-super {p0}, Landroid/app/Activity;->onDestroy()V\n    return-void\n.end method\n')
+ ambient=smali/'a/o.smali';source=ambient.read_text();needle='    invoke-virtual {p1}, Landroid/animation/ValueAnimator;->start()V'
+ if source.count(needle)!=1:raise ValueError('Ambient animator changed')
+ ambient.write_text(source.replace(needle,needle+'\n    invoke-static {p0, p1}, Lcom/naruto/r2/LauncherMotion;->registerView(Landroid/view/View;Landroid/animation/Animator;)V'))
+ for name in ['F','m0','o']:
+  change(smali/('a/'+name+'.smali'),'.method public final onDraw(Landroid/graphics/Canvas;)V',lambda b:start(b,'    invoke-static/range {p0 .. p0}, Lcom/naruto/r2/LauncherMotion;->visible(Landroid/view/View;)Z\n    move-result v0\n    if-nez v0, :r2_draw_visible\n    return-void\n    :r2_draw_visible'))
+ # Replace the legacy platform theme for all original and added dialogs/popups.
+ (root/'res/values/styles.xml').write_text((ROOT/'assets/styles.xml').read_text())
+ (root/'res/drawable').mkdir(exist_ok=True)
+ shutil.copyfile(ROOT/'assets/dialog_panel.xml',root/'res/drawable/dialog_panel.xml')
  strings=root/'res/values/strings.xml';text=strings.read_text();text,n=re.subn(r'(<string name="app_name">)[^<]*(</string>)',r'\g<1>STORM 3\2',text);assert n==1;strings.write_text(text)
  image=root/'res/drawable/storm3_icon.png';image.parent.mkdir(exist_ok=True);shutil.copyfile(ROOT/'assets/storm3_icon.png',image)
  manifest=root/'AndroidManifest.xml';text=manifest.read_text().replace('android:icon="@mipmap/ic_storm3"','android:icon="@drawable/storm3_icon"').replace('android:roundIcon="@mipmap/ic_storm3"','android:roundIcon="@drawable/storm3_icon"');manifest.write_text(text)
  yaml=root/'apktool.yml';text=yaml.read_text().replace('  versionCode: 47','  versionCode: 48').replace('  versionName: R1','  versionName: R2');yaml.write_text(text)
- print('PASS: R2 hooks, stock menu additions, invisible right stick, app name/icon and version applied.')
+ print('PASS: refined R2 menus, performance/lifecycle hooks, stock controls, app name/icon and version applied.')
 if __name__=='__main__':
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('decoded',type=Path);customize(p.parse_args().decoded)
