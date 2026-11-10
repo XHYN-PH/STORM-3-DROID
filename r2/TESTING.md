@@ -1,3 +1,21 @@
+# R2.2 verification
+
+Runtime source: `34105f2edba4c1a8cf697c4670eceb6df4ca6029`. Later README, logo and changelog updates do not alter the APK.
+
+- [Android interface run](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42769548812) passed: normal and 130% text size, hardware Canvas comparisons of cached and original touch artwork, stock press/cancel delivery, unchanged-layout editor return, asynchronous statistics publication/cancellation, panel scale/clamping/collapse and existing menu/save/logging checks.
+- [Real game-activity startup](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42768745165): the final touch-rendering runtime reaches native SDL and the expected missing-game-file dialog. The subsequent native helper change adds only a private same-ABI logging-policy reader for integration checks; it does not change the game's native library or startup hooks.
+- [Native helper integration](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42769548707) and [source checks](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42769548932).
+- 85 ASan/UBSan native logging assertions, 28 isolated save assertions, 15 display/configuration assertions and 4 linkage-regression tests.
+- 191 real APK cross-package member references checked before assembly. The preflight additionally compares stock touch input/editor methods and panel gestures against the verified R1 reference.
+
+The early logging threshold is read inside the ARM helper used by the engine. Reading it through the emulator's host Java libc produced a misleading failure because the native bridge can maintain a separate environment. The integration check now reads the same ABI that sets the threshold; host sanitizer tests also verify cutoff, repeated application and restoration of an existing/absent override.
+
+`STORM-3-R2.2-arm64.apk`: version R2.2 / code 50, Android 11+, ARM64, package `com.naruto.storm3`. SHA-256: `781431866bea98084b4892348a1bb055be6d3dd44ce8dc6e2ce35f02426b538b`. Signing, 16 KB alignment and archive checks pass. The existing signing certificate is retained for installation over R1/R2/R2.1. The native game library and bundled 100% save payload are byte-for-byte identical to R2.1.
+
+No actual game files or affected phone are available in the cloud environment. These checks do not measure gameplay FPS, test Xbox hardware, or attribute the intermittent native frame stalls. See [performance notes](PERFORMANCE-NOTES.md) and the developer-only local trace collector for that remaining investigation. No in-app diagnostics exporter or performance history has been reintroduced.
+
+---
+
 # R2.1 verification
 
 ## Startup regression
