@@ -217,6 +217,12 @@ public final class R2Instrumentation extends Instrumentation {
             int recorded=recordings.getInt(state),hit=hits.getInt(state);
             runOnMainSync(()->touchView[0].invalidate());waitForIdleSync();SystemClock.sleep(100);
             check(recordings.getInt(state)==recorded&&hits.getInt(state)>hit,"Unchanged buttons reuse recorded artwork without rebuilding gradients");
+            android.graphics.Bitmap gameplay=region(touchView[0]);
+            runOnMainSync(()->{try{touchClass.getMethod("setEditing",boolean.class).invoke(touchView[0],true);}catch(Throwable e){error[0]=e;}});
+            waitForIdleSync();SystemClock.sleep(100);
+            runOnMainSync(()->{try{touchClass.getMethod("setEditing",boolean.class).invoke(touchView[0],false);}catch(Throwable e){error[0]=e;}});
+            android.graphics.Bitmap afterEditor=region(touchView[0]);
+            check(samePixels(gameplay,afterEditor),"Leaving the stock layout editor redraws gameplay even when the layout is unchanged");gameplay.recycle();afterEditor.recycle();
             runOnMainSync(()->{try{
                 Object[] buttons=(Object[])touchClass.getField("a").get(touchView[0]);Object button=buttons[1];float x=button.getClass().getField("j").getFloat(button),y=button.getClass().getField("k").getFloat(button);
                 touchClass.getField("D").setInt(touchView[0],0);inputs.clear();

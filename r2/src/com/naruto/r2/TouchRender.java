@@ -76,6 +76,7 @@ public final class TouchRender {
     public static void invalidate(f0 view) {
         State state = state(view);
         long h = view.D;
+        h = h * 31 + (view.o ? 1 : 0);
         h = h * 31 + view.c; h = h * 31 + view.d;
         h = mix(h, view.f); h = mix(h, view.U); h = mix(h, view.V);
         h = mix(h, view.y); h = mix(h, view.z); h = mix(h, view.A); h = mix(h, view.B);
