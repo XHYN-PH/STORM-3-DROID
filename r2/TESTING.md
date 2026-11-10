@@ -1,3 +1,21 @@
+# R2.4 verification
+
+Runtime code: `ebf87355647676c86c61a40edc23358d4812e7fa`. The later `3b1e72265cfa10fb3859fb935f2b3dad7b7a84d8` change affects only the instrumentation harness; APK sources are unchanged.
+
+[Final Android interface validation](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42822690283) passes at normal and 130% text size. It executes the actual ARM64 GPU-probe JNI entry point and covers GPU/API/metadata rejection, private driver installation, notice retention, identical re-import, lock refusal, stale compatibility-result removal and the real stock configuration writer carrying a Mali driver into the native environment. It also checks worker-thread sampling, single-flight reads, lifecycle cancellation, startup-feedback state, hardware Canvas pixel comparisons, reduced compositing area, stock input/editor/mapping behavior, log sharing and existing save protections. Cache reuse is measured after the restored fixture has rendered, avoiding a timing-dependent false failure.
+
+[Real game-activity startup](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42820929694) passes for the final APK runtime: the actual activity reaches SDL native main and the expected missing-game-file fixture dialog, with R2.4 session metadata. The published broken R2 remains the regression control. [R1/native helper validation](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42816507988) and [R1 source checks](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42816507435) pass; that helper remains unchanged.
+
+Host/source checks: 85 native logging ASan/UBSan assertions, 28 isolated save assertions, 14 bounded session-file assertions, 10 FPS assertions, 30 driver/archive assertions, 6 renderer-summary assertions, 24 display/configuration/retry assertions and 4 linkage tests. Before assembly, 240 cross-package APK references resolve. All 13 unrelated methods in the shared stock save/driver utility, including the save importer, match the R1 reference. Original input/editor/panel gestures remain checked. The developer trace protocol was checked with simulated ADB transport, including an optional thermal-query timeout and overwrite refusal. No real phone trace was captured.
+
+The renderer-summary read uses the reader's explicit 1 MiB bound, with a regression check at that exact limit. Archive tests reject traversal, flattened duplicate names, excessive entries, hidden directory payloads, wrong architectures and symlink libraries; ordinary empty directory entries remain compatible. All unpacked package files participate in identity, including dependencies and notices.
+
+`STORM-3-R2.4-arm64.apk`: R2.4/code 52, package `com.naruto.storm3`, ARM64, minimum Android 11. SHA-256: `35d2d7e30fe4281a7f3143b52a3e121698c2e8d8d34c4a75e65c9070654bf921`. APK integrity, signing and 16 KiB alignment pass. The existing release certificate is retained. The engine library and bundled 100% save are byte-identical to R2.3. The additional GPU-probe library is 6.4 KiB and opens a surface-free system Vulkan instance in the launcher.
+
+Limits: no physical phone, controller, game data or ADB connection is available. Fixture driver libraries contain only test headers and are never executed or distributed in the release. Static inspection of the actual PanVK/RADV release binaries is documented in [DRIVERS.md](DRIVERS.md). Mali/Xclipse gameplay, vendor refresh behavior, shutdown while saving and the intermittent native stalls/FG queue tuning still need hardware testing. No measured performance gain or native stall fix is claimed.
+
+---
+
 # R2.3 verification
 
 Runtime source: `56c2a46d1d120a40f2310a9fe2d48ff38dbc3e00`. Later documentation changes do not alter the APK.

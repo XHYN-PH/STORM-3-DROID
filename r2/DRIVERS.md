@@ -20,7 +20,7 @@ No additional driver binaries are bundled. Package authorship and notices stay w
 
 The existing loader was inspected in the pinned upstream binary: it reads `NARUTO_GPU_DRIVER_DIR` and `NARUTO_GPU_DRIVER_LIBRARY`, then calls its linked AdrenoTools function with `ADRENOTOOLS_DRIVER_CUSTOM` only (`0x24fad3c..0x24fad54`). Qualcomm GPU-mapping hooks are not enabled for this custom-driver path. Its hook intercepts Vulkan ICD names generically, rather than hard-coding `vulkan.adreno.so`.
 
-Imports use unique private staging, bounded compressed/expanded reads (64/256 MiB), at most 128 entries, checked flat filenames and ARM64 ELF shared-object headers. Standard root-level ZIPs and the stock single-directory layout flatten to the same existing format; duplicate flattened names are rejected. Metadata and library names stay inside the private driver folder. Linux/glibc, OpenGL-only and identifiable Wayland packages are rejected. A content-derived ID keeps different packages separate and avoids replacing an existing driver with a same-name update.
+Imports use unique private staging, bounded compressed/expanded reads (64/256 MiB), at most 128 entries, checked flat filenames and ARM64 ELF shared-object headers. Standard root-level ZIPs and the stock single-directory layout flatten to the same existing format; duplicate flattened names are rejected. Metadata and library names stay inside the private driver folder. Linux/glibc, OpenGL-only and identifiable Wayland packages are rejected. An ID derived from every unpacked file, including dependencies and notices, keeps different packages separate and avoids replacing an existing driver with a same-name update.
 
 Imports and selection own the existing game/save lock while making changes. A refused import cannot release another owner's lock. Driver changes clear only `shadowzero.txt`, the previous ICD's compatibility result; no saves or shader caches are deleted. The original save importer and bundled save assets are untouched.
 
@@ -31,4 +31,4 @@ Reference reviewed: [PT4Droid's driver integration](https://github.com/XHYN-PH/p
 - FristOneRR PanVK v3.7.0 ZIP SHA-256: `6e9129a3b9db5204c315df2ba5836fb88dea063686a0d11426de992e9e2409c5`; ARM64 `libvulkan_panfrost.so`, `minApi: 28`.
 - RADV Xclipse v1.8.0 Android ZIP SHA-256: `0545b1b24817cc0ed4a9e4fc440a7080cbaf69a9ce5d1e4bb22b0e697129c223`; ARM64 `vulkan.radeon.so`, `minApi: 34`.
 
-Both publish the Vulkan ICD entry points expected by Android's loader and use the existing `meta.json` package format. Their dependencies and requirements were inspected statically; no claim of Mali/Xclipse gameplay testing is made.
+Both export the Android `HMI` Vulkan HAL module and Vulkan ICD entry points expected by the loader and use the existing `meta.json` package format. Their dependencies and requirements were inspected statically; no claim of Mali/Xclipse gameplay testing is made.
