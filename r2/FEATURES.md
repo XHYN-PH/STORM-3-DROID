@@ -13,3 +13,5 @@ Save export is read-only. Never modify assets/save100, save100-original, save100
 Controller profiles, settings backup, shader-prewarming controls and touch-layout profiles stay excluded. Crop changes presentation, not camera/HUD rendering.
 
 R2.2 removes only the added performance presets. Keep the stock Performance/Quality selector and all current user graphics settings. Size controls use the existing Display and Game options dialogs.
+
+R2.3 includes all feasible app-side follow-ups: selected-rate recovery only during foreground gameplay, compact statistics without memory queries, cached left-stick artwork, distinct game/output FPS, enriched stock Send log and launcher closing feedback. Native-stall profiling remains blocked on a phone trace; no native fix is claimed.

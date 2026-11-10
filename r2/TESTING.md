@@ -1,3 +1,21 @@
+# R2.3 verification
+
+Runtime source: `56c2a46d1d120a40f2310a9fe2d48ff38dbc3e00`. Later documentation changes do not alter the APK.
+
+[Android interface validation](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42778491650) passed at normal and 130% text size. It includes hardware-Canvas comparisons of cached stock buttons and moving left-stick artwork, reuse of recorded gradients, compact FPS redraw/memory-query suppression, expansion back to full statistics, original gestures/size controls, stock Send log chooser and provider access, metadata privacy/old-log handling, and shutdown progress waiting on an actual OS file lock. Destroying a launcher watcher preserves the lock/marker, and a recreated watcher clears only after the lock owner releases it. Test share intents are intercepted; no logs are sent to an external recipient.
+
+[Real startup validation](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42778491482) passed: the actual game activity reaches SDL native main and the expected empty-game-fixture dialog, and records its version/display session snapshot. The known published R2 crash remains a regression control. [R1/native helper validation](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42776057316) and [source checks](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42776057462) also pass; the helper is unchanged from R2.2.
+
+Host/source checks: 85 native logging assertions under ASan/UBSan, 28 save assertions, 13 session/status file assertions, 10 game/output-FPS assertions, 19 crop/configuration/display assertions and 4 linkage regression tests. Before assembly, 221 real APK cross-package member references resolve with valid access/invocation kind. Original input/editor methods and original collapse/drag behavior remain checked against the R1 reference.
+
+The combined Android interface checks use a 420-second instrumentation budget. An earlier normal-font run exhausted its old 300-second budget during the expanded flow; enlarged text passed that earlier run. The completed combined run passes both scales. Failure output now emits separate bounded annotations for instrumentation, crash and shell output so the actual failure tail is retained.
+
+`STORM-3-R2.3-arm64.apk`: R2.3 / code 51, package `com.naruto.storm3`, ARM64, Android 11+. SHA-256: `0f43d5c3b7b952f4f27228f30cc7bc9501d36c8951115ca691d37d83d9faa82c`. Signature, 16 KB alignment and ZIP integrity pass. The existing signing certificate is retained for updates. Native `libmain.so` and the bundled 100% save payload are byte-for-byte identical to R2.2.
+
+Limits: no affected phone, controller hardware or actual game files are available in this cloud workspace. Full gameplay, real-device refresh recovery and the intermittent native frame stalls still need device testing. No native stall fix or measured FPS improvement is claimed. See [performance notes](PERFORMANCE-NOTES.md), [session/exit design](SESSION-DETAILS.md) and the local trace collector.
+
+---
+
 # R2.2 verification
 
 Runtime source: `34105f2edba4c1a8cf697c4670eceb6df4ca6029`. Later README, logo and changelog updates do not alter the APK.

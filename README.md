@@ -7,7 +7,7 @@
 
 An English Android edition of the STORM 3 Full Burst native port, with refined menus, save backups and a smaller, adjustable FPS panel.
 
-[**Download the latest APK**](https://github.com/XHYN-PH/STORM-3-DROID/releases/latest) · [**R2.2 changes**](CHANGELOG_R2.2.md) · [**YouTube**](https://youtube.com/@xhyn_ph)
+[**Download the latest APK**](https://github.com/XHYN-PH/STORM-3-DROID/releases/latest) · [**R2.3 changes**](CHANGELOG_R2.3.md) · [**YouTube**](https://youtube.com/@xhyn_ph)
 
 </div>
 
@@ -22,9 +22,9 @@ Based on the original Android **v0.6.16** release.
 | App identity | Original name and icon | **STORM 3** with the circular gold Leaf icon above |
 | Settings and game menu | Legacy Android dialogs | Rounded dark menus with gold accents |
 | Menu effects | Decorative particle bursts | Particles removed; simple bounce and press feedback retained |
-| FPS/statistics panel | Fixed size | Smaller by default, with a **50–125%** size slider |
-| Repeated interface work | Button artwork rebuilt during redraws; statistics memory reads on the UI thread | Cached button artwork, fewer unnecessary redraws and background statistics collection |
-| Logging | Regular app log capture | Optional Logging switch, off by default; original **Send log** retained |
+| FPS/statistics panel | Fixed size | Smaller by default, with a **50–125%** size slider, separate game/output FPS and lighter collapsed mode |
+| Repeated interface work | Artwork rebuilt during redraws; statistics memory reads on the UI thread | Cached buttons and stick artwork, fewer unnecessary redraws and background statistics collection |
+| Logging | Regular app log capture | Optional Logging switch, off by default; original **Send log** now includes a session-details attachment |
 | Save management | Save import | Import, export, backups and protected restoration |
 | Display choices | Fit and Stretch | Fit, Stretch and proportional Crop to fill |
 | In-game options | Basic display/control options | Touch visibility, opacity, brightness, panel size and confirmed return to launcher |
@@ -35,8 +35,8 @@ The original touch layout and controller mapping screen are retained. The added 
 
 You need **Android 11 or newer**, a **64-bit ARM device**, Vulkan support, and the game's files. Game files are not included in the APK.
 
-1. Open the [latest release](https://github.com/XHYN-PH/STORM-3-DROID/releases/latest) and download **STORM-3-R2.2-arm64.apk**.
-2. Install the APK. R1, R2 and R2.1 users can update directly, without uninstalling or resetting app data.
+1. Open the [latest release](https://github.com/XHYN-PH/STORM-3-DROID/releases/latest) and download **STORM-3-R2.3-arm64.apk**.
+2. Install the APK. R1, R2, R2.1 and R2.2 users can update directly, without uninstalling or resetting app data.
 3. Open **STORM 3**, select the extracted game folder containing `default.xex`, then tap **Play**.
 
 If Android reports a signing conflict with the original upstream app, back up your saves before replacing that installation. This fork uses its own signing key.
@@ -44,11 +44,12 @@ If Android reports a signing conflict with the original upstream app, back up yo
 ## Useful controls
 
 - **Resize the FPS panel:** open **More options → Display → FPS / statistics size**. The same control is available in **Game options**, where resizing applies immediately. The default is 70%; Reset restores it. Drag the panel to move it, or use its minus button to collapse it.
+- **Read the FPS panel:** Game is the game's frame rate; Output includes frame generation. `~` means an estimate. Collapsed mode uses G and O for the same two values.
 - **Open Game options:** tap the floating menu button during gameplay, or use Android Back.
-- **Return to the launcher:** wait for the game's save indicator to finish, then choose **Return to launcher** and confirm. This exits the game; it does not create a manual save.
+- **Return to the launcher:** wait for the game's save indicator to finish, then choose **Return to launcher** and confirm. A **Closing game…** dialog waits for normal shutdown. This exits the game; it does not create a manual save.
 - **Export or back up saves:** open **More options → Saves**. Export reads your current save. Restoring a backup is blocked while the game is running or the bundled 100% save is active.
 - **Fill the display:** use **Fit**, **Stretch**, or **Crop**. Crop keeps the image proportions and cuts off edges; it does not expand the game's camera view.
-- **Collect a log:** enable **Logging**, restart the game, reproduce the issue, then use the original **Send log** link.
+- **Collect a log:** enable **Logging**, restart the game, reproduce the issue, then use the original **Send log** link. Its attachments now include app/session details automatically.
 
 ## GPU drivers
 
@@ -56,6 +57,7 @@ Rendering uses **Vulkan**. The system GPU driver is available by default. Compat
 
 ## Release history
 
+- [R2.3 — Clearer FPS, lighter overlays, better logs and exit feedback](CHANGELOG_R2.3.md)
 - [R2.2 — Smaller statistics panel and interface optimizations](CHANGELOG_R2.2.md)
 - [R2.1 — Game startup fix and restored Send log](CHANGELOG_R2.1.md)
 - [R2 — Refined menus, save tools and app identity](CHANGELOG_R2.md)
