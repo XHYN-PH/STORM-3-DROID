@@ -9,6 +9,8 @@ R2 renames the app to **STORM 3** and adds a circular Leaf icon, refined dark me
 - [Download the R2 test APK](https://github.com/XHYN-PH/STORM-3-DROID/raw/refs/heads/r2-candidate/STORM-3-R2-arm64.apk)
 - [R2 changes](CHANGELOG_R2.md) · [Customization source and build tools](r2/README.md)
 
+![R2 display settings](docs/screenshots/r2-display.jpg)
+
 R2 uses the same signing key as R1 and can update it. Back up saves first. This is a device-test build; full gameplay, launcher-return/save completion and vendor Vulkan crop behavior still need device feedback. R1 remains the published release.
 
 
