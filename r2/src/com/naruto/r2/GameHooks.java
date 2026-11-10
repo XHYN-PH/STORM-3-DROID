@@ -22,7 +22,20 @@ public final class GameHooks {
             if(gameLock==null)throw new IOException("A save operation is in progress. Close and reopen the game after it finishes.");
         }catch(IOException|OverlappingFileLockException e){try{if(gameLockFile!=null)gameLockFile.close();}catch(IOException ignored){}gameLockFile=null;gameLock=null;android.widget.Toast.makeText(a,"Save management is in progress. Try starting the game again when it finishes.",android.widget.Toast.LENGTH_LONG).show();a.finish();}
     }
-    public static void gameStop(Activity a){active=false;try{if(gameLock!=null)gameLock.release();}catch(IOException ignored){}try{if(gameLockFile!=null)gameLockFile.close();}catch(IOException ignored){}gameLock=null;gameLockFile=null;if(returnToLauncher){returnToLauncher=false;a.startActivity(new Intent(a,com.naruto.port.LauncherActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP));}}
+    public static void gameStop(Activity a){
+        active=false;
+        Thread engine=a instanceof com.naruto.port.NarutoActivity?((com.naruto.port.NarutoActivity)a).r2GameThread():null;
+        if(engine!=null&&engine.isAlive()){
+            // SDL's normal shutdown only waits one second. Keep saves locked if it takes longer.
+            Thread waiter=new Thread(()->{try{engine.join();}catch(InterruptedException interrupted){Thread.currentThread().interrupt();return;}new Handler(Looper.getMainLooper()).post(()->finishStop(a));},"STORM-exit-wait");waiter.setDaemon(true);waiter.start();
+        }else finishStop(a);
+    }
+    private static void finishStop(Activity a){
+        try{if(gameLock!=null)gameLock.release();}catch(IOException ignored){}
+        try{if(gameLockFile!=null)gameLockFile.close();}catch(IOException ignored){}
+        gameLock=null;gameLockFile=null;
+        if(returnToLauncher){returnToLauncher=false;a.startActivity(new Intent(a,com.naruto.port.LauncherActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP));}
+    }
     public static void refreshPrefs(Activity a){a.getSharedPreferences("naruto",4).getAll();}
     public static void gameReady(final Activity a){
         if(a.isFinishing())return;

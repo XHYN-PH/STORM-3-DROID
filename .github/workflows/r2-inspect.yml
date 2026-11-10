@@ -1,8 +1,15 @@
 name: R2 UI inspection
 on:
-  push:
-    paths: ['.github/workflows/r2-inspect.yml']
   workflow_dispatch:
+    inputs:
+      run_id:
+        description: Passing R2 Android validation run
+        required: true
+        type: string
+      font:
+        description: Font scale artifact
+        default: '1.0'
+        type: string
 permissions:
   actions: read
   contents: read
@@ -13,11 +20,13 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
+      R2_RUN_ID: ${{ inputs.run_id }}
+      R2_FONT: ${{ inputs.font }}
     steps:
       - name: Read screenshots from the passing Android run
         run: |
           set -euo pipefail
-          gh run download 42667789029 --name R2-Android-validation --dir results
+          gh run download "$R2_RUN_ID" --name "R2-Android-validation-$R2_FONT" --dir results
           python3 - <<'PY'
           from pathlib import Path
           import re
@@ -46,3 +55,11 @@ jobs:
         run: python3 preview.py controller 1
       - name: Controller preview second half
         run: python3 preview.py controller 2
+      - name: display preview part 1
+        run: python3 preview.py display 1
+      - name: display preview part 2
+        run: python3 preview.py display 2
+      - name: game-menu preview part 1
+        run: python3 preview.py game-menu 1
+      - name: game-menu preview part 2
+        run: python3 preview.py game-menu 2

@@ -21,7 +21,8 @@ decoded=work/'preflight-decoded';shutil.rmtree(decoded,ignore_errors=True);shuti
 run(sys.executable,ROOT/'customize.py',decoded)
 # Parameters in these stock methods are deliberately reused; their hooks must run before that reuse.
 for relative,signature,needle in [
- ('com/naruto/port/NarutoActivity.smali','.method private applyStretch(Z)V','GameHooks;->stockScreen')]:
+ ('com/naruto/port/NarutoActivity.smali','.method private applyStretch(Z)V','GameHooks;->stockScreen'),
+ ('com/naruto/port/NarutoActivity.smali','.method private applyControllerMode()V','GameMenu;->applyTouch')]:
  source=(decoded/'smali'/relative).read_text();body=re.search(re.escape(signature)+r'\n.*?^\.end method$',source,re.M|re.S).group()
  before_hook=body.split(needle,1)[0]
  if re.search(r'^    (?:iget[^ ]*|move-result[^ ]*|const[^ ]*) p[01](?:,|$)',before_hook,re.M):raise AssertionError('Hook uses a clobbered stock parameter: '+relative)
