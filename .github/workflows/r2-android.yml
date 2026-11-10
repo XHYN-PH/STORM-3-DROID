@@ -110,7 +110,9 @@ jobs:
           import os,base64
           from pathlib import Path
           for name in ['launcher','controller','display','game-menu']:
-              data=(Path(os.environ['RUNNER_TEMP'])/'r1-results'/f'{name}.preview.jpg').read_bytes()
+              image=Path(os.environ['RUNNER_TEMP'])/'r1-results'/f'{name}.preview.jpg'
+              if not image.exists(): continue
+              data=image.read_bytes()
               if len(data)<=45000:
                   encoded=base64.b64encode(data).decode();parts=[encoded[i:i+3000] for i in range(0,len(encoded),3000)]
                   for index,part in enumerate(parts,1):print(f'::notice title=R2 preview {name} {index:02d}/{len(parts):02d}::'+part)

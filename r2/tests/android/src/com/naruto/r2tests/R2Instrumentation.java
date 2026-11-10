@@ -115,7 +115,8 @@ public final class R2Instrumentation extends Instrumentation {
     private void verifyR2(final Context context,final ClassLoader loader,List<View> views)throws Exception {
         waitForIdleSync();screenshot(context,"launcher");
         check("STORM 3".contentEquals(context.getApplicationInfo().loadLabel(context.getPackageManager())),"Installed app is named STORM 3");
-        check(!hasText(views,"Performance"),"Added performance presets are removed from the launcher");
+        View optionsTitle=named(views,"More options");List<View> optionViews=new ArrayList<>();if(optionsTitle!=null)collect((View)optionsTitle.getParent(),optionViews);
+        check(hasText(optionViews,"Display")&&hasText(optionViews,"Saves")&&hasText(optionViews,"Tools")&&!hasText(optionViews,"Performance"),"Added presets are removed while the stock Performance selector is retained");
         check(hasText(views,"More options"),"Stock launcher contains one compact More options card");
         android.graphics.drawable.Drawable icon=context.getApplicationInfo().loadIcon(context.getPackageManager());android.graphics.Bitmap iconImage=android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888);icon.setBounds(0,0,64,64);icon.draw(new android.graphics.Canvas(iconImage));check(android.graphics.Color.alpha(iconImage.getPixel(0,0))==0&&android.graphics.Color.alpha(iconImage.getPixel(32,32))>0,"Circular app icon has transparent corners and an opaque center");iconImage.recycle();
         check(Class.forName("a.a0",true,loader).getDeclaredMethod("setValues",float[].class)!=null,"Patched stock statistics class verifies on Android");
