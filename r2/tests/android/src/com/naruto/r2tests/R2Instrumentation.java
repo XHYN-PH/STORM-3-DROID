@@ -228,6 +228,9 @@ public final class R2Instrumentation extends Instrumentation {
                 check(samePixels(fullLayer,boundedLayer),"Compact custom layouts preserve caption/glow pixels and grouped opacity with tighter compositing bounds");fullLayer.recycle();boundedLayer.recycle();
                 check(state.getClass().getField("layerArea").getFloat(state)<state.getClass().getField("originalLayerArea").getFloat(state)*.85f,"A compact control layout uses a smaller transparency layer");
             }finally{runOnMainSync(()->{try{for(int i=0;i<compactButtons.length;i++)compactButtons[i].getClass().getField("p").setBoolean(compactButtons[i],hidden[i]);compact.getClass().getField("j").setFloat(compact,previousX);touchView[0].invalidate();}catch(Throwable e){error[0]=e;}});}
+            // Restoring the compact fixture legitimately invalidates its cached artwork.
+            // Flush that frame before measuring a subsequent unchanged redraw.
+            android.graphics.Bitmap restoredLayout=region(touchView[0]);restoredLayout.recycle();
             int recorded=recordings.getInt(state),hit=hits.getInt(state);
             runOnMainSync(()->touchView[0].invalidate());waitForIdleSync();SystemClock.sleep(100);
             check(recordings.getInt(state)==recorded&&hits.getInt(state)>hit,"Unchanged buttons reuse recorded artwork without rebuilding gradients");
@@ -358,6 +361,8 @@ public final class R2Instrumentation extends Instrumentation {
     private void testDriverSupport(Context context,ClassLoader loader)throws Exception {
         Class<?> support=Class.forName("com.naruto.r2.DriverSupport",true,loader);String actual=(String)support.getMethod("gpu").invoke(null);
         check(actual!=null,"ARM64 system-Vulkan probe links and returns without starting the game");
+        Method nativeProbe=support.getDeclaredMethod("systemGpu");nativeProbe.setAccessible(true);
+        check(nativeProbe.invoke(null) instanceof String,"GPU probe JNI symbol binds and its actual ARM64 implementation executes");
         Field gpu=support.getDeclaredField("gpu");gpu.setAccessible(true);Object previous=gpu.get(null);
         File fixture=new File(context.getFilesDir(),"r24-driver-"+java.util.UUID.randomUUID());fixture.mkdirs();
         Context isolated=new android.content.ContextWrapper(context){@Override public File getFilesDir(){return fixture;}};
