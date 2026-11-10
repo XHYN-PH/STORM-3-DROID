@@ -61,8 +61,10 @@ Rendering uses **Vulkan**. The system GPU driver is available by default. Compat
 - [R2 — Refined menus, save tools and app identity](CHANGELOG_R2.md)
 - [R1 — English translation and quieter menu effects](CHANGELOG_R1.md)
 
-## Source code
+## Source code and limitations
 
-The customization code, translations, patches and build tools are published in this repository. See the [build instructions](r2/README.md). The upstream native engine's source is not included; this project customizes its pinned Android release.
+The original port's engine is **closed source**, and I do not have access to its source code. This limits the bugs I can fix, the performance improvements I can make, and the features I can add, especially changes inside the engine and renderer.
+
+This fork focuses on the launcher, interface, settings, APK patches and Android integration. The customization code, translations, patches and build tools are published in this repository. See the [build instructions](r2/README.md).
 
 Customization code is [MIT-licensed](r1/LICENSE). Existing engine, game and third-party notices are retained in [Third-party notices](THIRD_PARTY_NOTICES.md).
