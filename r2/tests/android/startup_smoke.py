@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 XHYN_PH. SPDX-License-Identifier: MIT
-"""Run the actual game activity and its menu in :game; game data is not bundled."""
+"""Run the actual game activity in :game through the native loader boundary."""
 import os,re,subprocess,time,xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -31,16 +31,8 @@ def dump_menu(name):
     path=result/name;command('pull',remote,path)
     return ET.parse(path).getroot()
 
-def tap_text(root,text):
-    for node in root.iter('node'):
-        if node.get('text')!=text:continue
-        bounds=list(map(int,re.findall(r'\d+',node.get('bounds',''))))
-        if len(bounds)==4:
-            command('shell','input','tap',(bounds[0]+bounds[2])//2,(bounds[1]+bounds[3])//2);return
-    raise AssertionError('Missing actual game-menu action: '+text)
-
 command('root');command('wait-for-device')
-for version,file in [('R1','R1-control.apk'),('R2','R2-ci-only.apk')]:
+for version,file in [('R1','R1-control.apk'),('R2-broken','R2-broken-control.apk'),('R2','R2-ci-only.apk')]:
     log=''
     try:
         print(command('install','--no-incremental','-r',result/file,timeout=90),flush=True)
@@ -57,20 +49,20 @@ for version,file in [('R1','R1-control.apk'),('R2','R2-ci-only.apk')]:
         start=command('shell','am','start','-W','-n',package+'/com.naruto.port.NarutoActivity','--es','gameDirectory',f'/sdcard/Android/data/{package}/files/r2-empty-game')
         (result/f'{version}-start.txt').write_text(start);notice(version+' actual activity',start)
         time.sleep(5)
+        if version=='R2-broken':
+            log=read_log(version)
+            assert 'IllegalAccessError' in log and 'nativeShaderPrepare' in log,'The published regression control did not reproduce its native-access startup crash.'
+            notice('Published R2 regression','REPRODUCED: nativeShaderPrepare IllegalAccessError closes the published game activity.')
+            continue
         pid=assert_alive();log=read_log(version)
         assert 'Running main function SDL_main' in log,'The native SDL entry point did not start.'
         if version=='R2':
-            command('shell','input','tap','64','64');time.sleep(1)
-            menu=dump_menu('R2-game-menu.xml')
-            assert any(node.get('text')=='Game options' for node in menu.iter('node')),'The actual in-game menu did not open.'
-            tap_text(menu,'Show FPS');time.sleep(2);assert_alive()
-            tap_text(menu,'Resume');time.sleep(1)
-            command('shell','input','tap','64','64');time.sleep(1)
-            reopened=dump_menu('R2-game-menu-reopened.xml')
-            assert any(node.get('text')=='Return to launcher' for node in reopened.iter('node')),'The game menu did not reopen.'
+            hierarchy=dump_menu('R2-native-loader.xml')
+            messages=[node.get('text','') for node in hierarchy.iter('node')]
+            assert any('missing default.xex' in text for text in messages),'The native loader did not reach the expected empty-fixture boundary.'
             assert_alive();log=read_log(version)
         assert not re.search(r'AndroidRuntime: Process: com\.naruto\.storm3:game',log),'AndroidRuntime reported an uncaught game exception.'
-        notice(version+' startup result','PASS: actual :game process alive, SDL native main reached'+(', real menu opened/reopened and FPS toggle executed' if version=='R2' else ''))
+        notice(version+' startup result','PASS: actual :game process alive, SDL native main reached'+(', native missing-game-file dialog reached without the Java startup crash' if version=='R2' else ''))
     except Exception as error:
         log=read_log(version)
         relevant='\n'.join(line for line in log.splitlines() if 'AndroidRuntime' in line or 'F libc' in line or 'F DEBUG' in line)

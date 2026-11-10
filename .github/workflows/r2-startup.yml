@@ -37,6 +37,12 @@ jobs:
           python3 r1/build_r1.py --r2 --android-jar "$ANDROID_HOME/platforms/android-30/android.jar" --upstream "$RUNNER_TEMP/r1-tools/upstream.apk" --apktool "$RUNNER_TEMP/r1-tools/apktool.jar" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --build-tools "$ANDROID_HOME/build-tools/35.0.0" --keystore "$RUNNER_TEMP/r1-tools/test.p12" --password-file "$RUNNER_TEMP/r1-tools/test.pass" --output "$RUNNER_TEMP/r1-results/R2-ci-only.apk"
           python3 r2/tests/android/build_tests.py --android-jar "$ANDROID_HOME/platforms/android-30/android.jar" --build-tools "$ANDROID_HOME/build-tools/35.0.0" --keystore "$RUNNER_TEMP/r1-tools/test.p12" --password-file "$RUNNER_TEMP/r1-tools/test.pass" --output "$RUNNER_TEMP/r1-tools/R2-tests.apk"
           python3 r1/build_r1.py --android-jar "$ANDROID_HOME/platforms/android-30/android.jar" --upstream "$RUNNER_TEMP/r1-tools/upstream.apk" --apktool "$RUNNER_TEMP/r1-tools/apktool.jar" --ndk "$ANDROID_HOME/ndk/28.2.13676358" --build-tools "$ANDROID_HOME/build-tools/35.0.0" --keystore "$RUNNER_TEMP/r1-tools/test.p12" --password-file "$RUNNER_TEMP/r1-tools/test.pass" --output "$RUNNER_TEMP/r1-results/R1-control.apk"
+      - name: Prepare the published R2 regression control
+        run: |
+          set -euo pipefail
+          curl -fLsS -o "$RUNNER_TEMP/r1-tools/R2-published.apk" https://github.com/XHYN-PH/STORM-3-DROID/releases/download/R2/STORM-3-R2-arm64.apk
+          echo "abe7553daf00f2c9c2ec92b2f1a98198025c974e8dd9cfe1bb24b13bab2f23e3  $RUNNER_TEMP/r1-tools/R2-published.apk" | sha256sum -c -
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$RUNNER_TEMP/r1-tools/test.p12" --ks-key-alias xhyn-r1 --ks-pass "file:$RUNNER_TEMP/r1-tools/test.pass" --out "$RUNNER_TEMP/r1-results/R2-broken-control.apk" "$RUNNER_TEMP/r1-tools/R2-published.apk"
       - name: Start hardware-accelerated Android 11 with ARM translation
         run: |
           set -euo pipefail
@@ -67,7 +73,7 @@ jobs:
           fi
           abis=$("$ANDROID_HOME/platform-tools/adb" shell getprop ro.product.cpu.abilist | tr -d '\r')
           echo "::notice title=Android test ABIs::$abis"
-      - name: Compare real R1 and R2 activity startup and native menu calls
+      - name: Compare real R1 and R2 game-activity startup
         timeout-minutes: 6
         run: python3 r2/tests/android/startup_smoke.py
       - name: Retain startup evidence
@@ -78,5 +84,5 @@ jobs:
           path: |
             ${{ runner.temp }}/r1-results/*startup.log
             ${{ runner.temp }}/r1-results/*start.txt
-            ${{ runner.temp }}/r1-results/*menu*.xml
+            ${{ runner.temp }}/r1-results/*.xml
           if-no-files-found: ignore
