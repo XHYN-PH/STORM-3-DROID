@@ -47,7 +47,7 @@ for version,file in [('R1','R1-control.apk'),('R2','R2-ci-only.apk')]:
         command('shell','am','force-stop',package)
         command('shell','appops','set',package,'MANAGE_EXTERNAL_STORAGE','allow')
         command('shell','mkdir','-p',f'/data/data/{package}/shared_prefs',f'/sdcard/Android/data/{package}/files/r2-empty-game')
-        prefs=tools/'naruto.xml';prefs.write_text("<?xml version='1.0' encoding='utf-8' standalone='yes' ?><map><boolean name='logging_enabled' value='true'/><boolean name='menu_stats' value='true'/><int name='menu_screen_hz' value='0'/><int name='framegen_playing' value='1'/></map>")
+        prefs=tools/'naruto.xml';prefs.write_text("<?xml version='1.0' encoding='utf-8' standalone='yes' ?><map><boolean name='logging_enabled' value='true'/><boolean name='menu_stats' value='true'/><int name='menu_screen_hz' value='0'/><int name='framegen_playing' value='1'/><float name='shadow_emblem_x_v2' value='24.0'/><float name='shadow_emblem_y_v2' value='24.0'/></map>")
         command('push',prefs,f'/data/data/{package}/shared_prefs/naruto.xml')
         uid=command('shell','stat','-c','%u',f'/data/data/{package}').strip()
         if not uid.isdigit():raise AssertionError('Cannot read isolated CI app UID')
@@ -60,21 +60,21 @@ for version,file in [('R1','R1-control.apk'),('R2','R2-ci-only.apk')]:
         pid=assert_alive();log=read_log(version)
         assert 'Running main function SDL_main' in log,'The native SDL entry point did not start.'
         if version=='R2':
-            command('shell','input','keyevent','4');time.sleep(1)
+            command('shell','input','tap','64','64');time.sleep(1)
             menu=dump_menu('R2-game-menu.xml')
             assert any(node.get('text')=='Game options' for node in menu.iter('node')),'The actual in-game menu did not open.'
             tap_text(menu,'Show FPS');time.sleep(2);assert_alive()
-            command('shell','input','keyevent','4');time.sleep(1)
-            command('shell','input','keyevent','4');time.sleep(1)
+            tap_text(menu,'Resume');time.sleep(1)
+            command('shell','input','tap','64','64');time.sleep(1)
             reopened=dump_menu('R2-game-menu-reopened.xml')
             assert any(node.get('text')=='Return to launcher' for node in reopened.iter('node')),'The game menu did not reopen.'
             assert_alive();log=read_log(version)
         assert not re.search(r'AndroidRuntime: Process: com\.naruto\.storm3:game',log),'AndroidRuntime reported an uncaught game exception.'
         notice(version+' startup result','PASS: actual :game process alive, SDL native main reached'+(', real menu opened/reopened and FPS toggle executed' if version=='R2' else ''))
-    except Exception:
+    except Exception as error:
         log=read_log(version)
         relevant='\n'.join(line for line in log.splitlines() if 'AndroidRuntime' in line or 'F libc' in line or 'F DEBUG' in line)
-        notice(version+' startup failure',relevant[-12000:] or log[-3000:])
+        notice(version+' startup failure',str(error)+'\n'+(relevant[-12000:] or log[-3000:]))
         raise
     finally:
         command('shell','am','force-stop',package,check=False)
