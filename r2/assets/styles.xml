@@ -15,6 +15,9 @@
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:windowLightNavigationBar">false</item>
     </style>
+    <style name="GameTheme" parent="@android:style/Theme.NoTitleBar.Fullscreen">
+        <item name="android:alertDialogTheme">@style/StormDialog</item>
+    </style>
     <style name="StormDialog" parent="@android:style/Theme.Material.Dialog.Alert">
         <item name="android:fontFamily">sans</item>
         <item name="android:colorAccent">#E7B96B</item>

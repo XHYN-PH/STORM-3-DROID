@@ -115,6 +115,11 @@ public final class R2Instrumentation extends Instrumentation {
     private void verifyR2(final Context context,final ClassLoader loader,List<View> views)throws Exception {
         waitForIdleSync();screenshot(context,"launcher");
         check("STORM 3".contentEquals(context.getApplicationInfo().loadLabel(context.getPackageManager())),"Installed app is named STORM 3");
+        android.content.pm.ActivityInfo gameInfo=context.getPackageManager().getActivityInfo(new android.content.ComponentName(context.getPackageName(),"com.naruto.port.NarutoActivity"),0);
+        int gameTheme=context.getResources().getIdentifier("GameTheme","style",context.getPackageName());check(gameTheme!=0&&gameInfo.theme==gameTheme,"Game activity uses the isolated stock-compatible window theme");
+        android.view.ContextThemeWrapper gameContext=new android.view.ContextThemeWrapper(context,gameTheme);android.content.res.TypedArray window=gameContext.obtainStyledAttributes(new int[]{android.R.attr.windowNoTitle,android.R.attr.windowFullscreen});try{check(window.getBoolean(0,false)&&window.getBoolean(1,false),"Game window keeps the original fullscreen and no-title flags");}finally{window.recycle();}
+        android.util.TypedValue dialogs=new android.util.TypedValue();check(gameContext.getTheme().resolveAttribute(android.R.attr.alertDialogTheme,dialogs,true)&&dialogs.resourceId==context.getResources().getIdentifier("StormDialog","style",context.getPackageName()),"Modern game dialogs remain separate from the native rendering window");
+
         check(hasText(views,"Performance"),"Performance presets are exposed in the launcher");
         check(hasText(views,"More options"),"Stock launcher contains one compact More options card");
         android.graphics.drawable.Drawable icon=context.getApplicationInfo().loadIcon(context.getPackageManager());android.graphics.Bitmap iconImage=android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888);icon.setBounds(0,0,64,64);icon.draw(new android.graphics.Canvas(iconImage));check(android.graphics.Color.alpha(iconImage.getPixel(0,0))==0&&android.graphics.Color.alpha(iconImage.getPixel(32,32))>0,"Circular app icon has transparent corners and an opaque center");iconImage.recycle();
@@ -179,7 +184,7 @@ public final class R2Instrumentation extends Instrumentation {
         boolean originalLogging=prefs.getBoolean("logging_enabled",false);
         boolean originalPt=prefs.getBoolean("menu_ptbr",false);
         try {
-            check("R2".equals(context.getPackageManager().getPackageInfo(context.getPackageName(),0).versionName),"Installed version is R2");
+            check("R2.1".equals(context.getPackageManager().getPackageInfo(context.getPackageName(),0).versionName),"Installed version is R2.1");
             check(!originalLogging,"Logging defaults to off on a fresh install");
             ClassLoader loader=context.getClassLoader();
             Class<?> control=Class.forName("com.naruto.port.LoggingControl",true,loader);

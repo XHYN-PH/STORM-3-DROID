@@ -89,7 +89,7 @@ jobs:
             "$adb" logcat -c
             timeout --kill-after=5 35 "$adb" shell am start -W -n com.naruto.storm3/com.naruto.port.NarutoActivity --es gameDirectory /sdcard/Android/data/com.naruto.storm3/files/r2-empty-game > "$RUNNER_TEMP/r1-results/$version-start.txt" 2>&1 || true
             sleep 5
-            "$adb" logcat -d -b all -t 1000 > "$RUNNER_TEMP/r1-results/$version-startup.log"
+            "$adb" logcat -d -b all > "$RUNNER_TEMP/r1-results/$version-startup.log"
             "$adb" shell am force-stop com.naruto.storm3
           done
           python3 - <<'CHECK'
@@ -101,9 +101,10 @@ jobs:
               text=(root/f'{version}-startup.log').read_text(errors='replace')
               lines=text.splitlines();relevant=[]
               for index,line in enumerate(lines):
-                  if 'AndroidRuntime' in line or 'FATAL EXCEPTION' in line or 'Caused by:' in line:
+                  if 'AndroidRuntime' in line or 'FATAL EXCEPTION' in line:
                       relevant.append(line)
-              if not relevant:relevant=[line for line in lines if 'com.naruto.storm3' in line or 'naruto' in line.lower()][-24:]
+              relevant += [line for line in lines if 'com.naruto.storm3' in line or 'naruto' in line.lower() or 'SDL' in line][-30:]
+              relevant.insert(0,(root/f'{version}-start.txt').read_text(errors='replace'))
               message='\n'.join(relevant)[-9000:]
               for part in [message[i:i+3000] for i in range(0,len(message),3000)]:
                   escaped=part.replace('%','%25').replace('\r','%0D').replace('\n','%0A')
