@@ -20,7 +20,7 @@ public final class GameMenu {
  }
  private static void neutral(NarutoActivity a){if(a.controls!=null){long now=SystemClock.uptimeMillis();MotionEvent cancel=MotionEvent.obtain(now,now,MotionEvent.ACTION_CANCEL,0,0,0);a.controls.onTouchEvent(cancel);cancel.recycle();}try{NarutoActivity.nativeSetTouch(0,0,0,0,0,0,0);}catch(UnsatisfiedLinkError ignored){}}
  public static void back(NarutoActivity a){if(a.controls==null){exit(a);return;}if(a.controls.o)a.controls.setEditing(false);else show(a);}
- public static void applyTouch(NarutoActivity a){if(a.controls!=null&&GameHooks.prefs(a).getBoolean("r2_hide_touch",false))a.controls.setVisibility(View.GONE);}
+ public static void applyTouch(NarutoActivity a){if(a.controls!=null&&GameHooks.prefs(a).getBoolean("r2_hide_touch",false)){a.controls.setEditing(false);a.controls.setVisibility(View.GONE);}}
  public interface Actions {void display();void stats(boolean on);void touch(boolean on);void controller(boolean on);void opacity();void brightness();void edit();void hide();void leave();}
  public static void show(NarutoActivity a){if(a.isFinishing()||a.isDestroyed()||a.controls==null)return;neutral(a);SharedPreferences p=GameHooks.prefs(a);open(a,new Actions(){
   public void display(){screen(a);}public void stats(boolean on){p.edit().putBoolean("menu_stats",on).apply();try{NarutoActivity.nativeSetShowStats(on);}catch(UnsatisfiedLinkError ignored){}GameLoop.resume(a);}
