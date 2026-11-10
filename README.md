@@ -2,16 +2,16 @@
 
 **Modified and Translated by XHYN_PH** · [YouTube](https://youtube.com/@xhyn_ph)
 
-## R2 device-test build
+## R2 — Refined Edition
 
 R2 renames the app to **STORM 3** and adds a circular Leaf icon, refined dark menus, performance presets, save export/backups and proportional fullscreen crop. Controller mapping and touch input use their original layout.
 
-- [Download the R2 test APK](https://github.com/XHYN-PH/STORM-3-DROID/raw/refs/heads/r2-candidate/STORM-3-R2-arm64.apk)
+- [Download R2](https://github.com/XHYN-PH/STORM-3-DROID/releases/tag/R2)
 - [R2 changes](CHANGELOG_R2.md) · [Customization source and build tools](r2/README.md)
 
 ![R2 display settings](docs/screenshots/r2-display.jpg)
 
-R2 uses the same signing key as R1 and can update it. Back up saves first. This is a device-test build; full gameplay, launcher-return/save completion and vendor Vulkan crop behavior still need device feedback. R1 remains the published release.
+R2 uses the same signing key as R1 and can update it. Back up saves first. Full gameplay, launcher-return/save completion and vendor Vulkan crop behavior still need device feedback.
 
 
 ## R1 — English Edition
@@ -49,7 +49,7 @@ see the R1 changelog for the changes in this fork.
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![Architecture](https://img.shields.io/badge/arm64--v8a-64%20bits-orange)
 ![Graphics](https://img.shields.io/badge/Vulkan-shadowZero-AC162C?logo=vulkan&logoColor=white)
-![Version](https://img.shields.io/badge/version-R1-blue)
+![Version](https://img.shields.io/badge/version-R2-blue)
 
 [**⬇️ Download (Android and PC)**](../../releases) · [Requirements](#-requirements) · [Installation](#-installation) · [Settings](#%EF%B8%8F-settings) · [FAQ](#-frequently-asked-questions)
 
