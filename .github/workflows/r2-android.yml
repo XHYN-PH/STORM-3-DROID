@@ -1,7 +1,7 @@
 name: R2 Android validation
 on:
   push:
-    paths: ['r2/**/*.java', 'r2/**/*.py', 'r2/assets/*', 'r2/tests/android/AndroidManifest.xml', 'r1/**/*.py', 'r1/**/*.c', 'r1/**/*.smali', 'r1/**/*.json', 'r1/tests/android/AndroidManifest.xml', '.github/workflows/r2-android.yml']
+    paths: ['r2/**/*.java', 'r2/**/*.py', 'r2/assets/*', 'r2/native/**', 'r2/tests/android/AndroidManifest.xml', 'r1/**/*.py', 'r1/**/*.c', 'r1/**/*.smali', 'r1/**/*.json', 'r1/tests/android/AndroidManifest.xml', '.github/workflows/r2-android.yml']
   workflow_dispatch:
 concurrency:
   group: r2-android-${{ github.ref }}
@@ -70,7 +70,7 @@ jobs:
           abis=$("$ANDROID_HOME/platform-tools/adb" shell getprop ro.product.cpu.abilist | tr -d '\r')
           echo "::notice title=Android test ABIs::$abis"
       - name: Test the R2 Android interface and native logging integration
-        timeout-minutes: 10
+        timeout-minutes: 13
         run: |
           set -euo pipefail
           exec > >(tee "$RUNNER_TEMP/r1-results/android-command-log.txt") 2>&1
@@ -94,7 +94,7 @@ jobs:
           timeout --kill-after=10 90 "$ANDROID_HOME/platform-tools/adb" install --no-incremental -t -r "$RUNNER_TEMP/r1-tools/R2-tests.apk"
           "$ANDROID_HOME/platform-tools/adb" shell settings put system font_scale "${{ matrix.font }}"
           "$ANDROID_HOME/platform-tools/adb" logcat -c
-          timeout --kill-after=10 420 "$ANDROID_HOME/platform-tools/adb" shell am instrument -w -r com.naruto.storm3.r2tests/com.naruto.r2tests.R2Instrumentation | tee "$RUNNER_TEMP/r1-results/android-instrumentation.txt"
+          timeout --kill-after=10 600 "$ANDROID_HOME/platform-tools/adb" shell am instrument -w -r com.naruto.storm3.r2tests/com.naruto.r2tests.R2Instrumentation | tee "$RUNNER_TEMP/r1-results/android-instrumentation.txt"
           timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" root
           timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" wait-for-device
           for name in launcher controller display game-menu statistics closing; do

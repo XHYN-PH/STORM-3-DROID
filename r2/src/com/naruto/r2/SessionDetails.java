@@ -35,20 +35,19 @@ public final class SessionDetails {
         try { PackageInfo p=c.getPackageManager().getPackageInfo(c.getPackageName(),0);return clean(p.versionName)+" / code "+p.getLongVersionCode(); }
         catch(Exception unavailable) { return "Unavailable"; }
     }
-    private static String choice(SharedPreferences p,String key,String... values) { if(!p.contains(key))return "Default (not stored)";int index=p.getInt(key,0);return index>=0&&index<values.length?values[index]:"Unknown selection ("+index+")"; }
+    private static String choice(SharedPreferences p,String key,int initial,String... values) { int index=p.getInt(key,initial);return index>=0&&index<values.length?values[index]+(p.contains(key)?"":" (default)"):"Unknown selection ("+index+")"; }
     private static String selected(Context c) {
         SharedPreferences p=GameHooks.prefs(c);
-        String driverLabel=android.text.TextUtils.isEmpty(p.getString("gpu_driver",""))?"System Vulkan":"Custom (see active GPU report)";
-        if(c instanceof LauncherActivity)try{a.k driver=((LauncherActivity)c).m();if(driver!=null)driverLabel=clean(driver.a())+" / "+clean(driver.c);}catch(RuntimeException ignored){}
+        String driverLabel=DriverSupport.selectedLabel(c);
         return "App: STORM 3 "+version(c)+"\nAndroid: "+clean(Build.VERSION.RELEASE)+" (API "+Build.VERSION.SDK_INT+")\nDevice: "+clean(Build.MANUFACTURER)+" "+clean(Build.MODEL)
-            +"\nResolution selected: "+choice(p,"menu_resolution_v5","360p","480p","540p","720p","900p","1080p","2K","4K")
-            +"\nAntialiasing selected: "+choice(p,"menu_antialiasing","Off","FXAA","FXAA+")
-            +"\nScaling selected: "+choice(p,"menu_upscaling","Normal","FSR")
-            +"\nGame FPS selected: "+choice(p,"menu_fps","20","24","30")
-            +"\nFrame generation selected: "+choice(p,"menu_framegen","Off","2x","3x","4x")
-            +"\nFrame generation mode selected: "+choice(p,"menu_framegen_mode","Performance","Quality")
-            +"\nRefresh selected: "+choice(p,"menu_screen_hz","Auto","60 Hz","90 Hz","120 Hz")
-            +"\nDriver selected: "+driverLabel
+            +"\nResolution selected: "+choice(p,"menu_resolution_v5",1,"360p","480p","540p","720p","900p","1080p","2K","4K")
+            +"\nAntialiasing selected: "+choice(p,"menu_antialiasing",0,"Off","FXAA","FXAA+")
+            +"\nScaling selected: "+choice(p,"menu_upscaling",0,"Normal","FSR")
+            +"\nGame FPS selected: "+choice(p,"menu_fps",2,"20","24","30")
+            +"\nFrame generation selected: "+choice(p,"menu_framegen",0,"Off","2x","3x","4x")
+            +"\nFrame generation mode selected: "+choice(p,"menu_framegen_mode",1,"Performance","Quality")
+            +"\nRefresh selected: "+choice(p,"menu_screen_hz",0,"Auto","60 Hz","90 Hz","120 Hz")
+            +"\nDriver selected: "+clean(driverLabel)
             +"\nLogging: "+(p.getBoolean("logging_enabled",false)?"On":"Off")+"\n";
     }
     private static String hz(Activity a) {
@@ -84,7 +83,8 @@ public final class SessionDetails {
         if(GameHooks.active&&a.hasWindowFocus()&&!a.isFinishing()){foreground=observed;foregroundAt=now;}
         String text="Session started epoch ms: "+started+"\nSession started UTC: "+Instant.ofEpochMilli(started)+"\nSnapshot epoch ms: "+captured+"\nSnapshot UTC: "+now+"\nPhase: "+phase
             +"\nLast foreground Android display rate: "+foreground+"\nForeground observation UTC: "+foregroundAt
-            +"\nAndroid display rate at snapshot: "+observed+"\n"+settings;
+            +"\nAndroid display rate at snapshot: "+observed+"\n"+settings
+            +(a instanceof NarutoActivity?"Refresh recovery: "+Performance.observations((NarutoActivity)a)+"\nStatistics sampling: "+NativeSamples.observations((NarutoActivity)a)+"\n":"");
         File file=new File(a.getFilesDir(),PRIVATE);io.execute(()->{try{SessionFiles.write(file.toPath(),text);}catch(IOException ignored){}});
     }
     public static String prepare(Context context,String current) throws IOException {
@@ -103,6 +103,7 @@ public final class SessionDetails {
             Matcher rate=Pattern.compile("AMD optical FG: (\\d+)x \\(asked (\\d+)x, screen (\\d+) Hz\\)").matcher(tail);String latest="";
             while(rate.find())latest="Engine last reported FG / requested FG / refresh: "+rate.group(1)+"x / "+rate.group(2)+"x / "+rate.group(3)+" Hz\n";
             out.append(latest);
+            out.append(RendererReport.describe(SessionFiles.read(log.toPath(),1048576,true)));
         }
         String gpu=SessionFiles.read(new File(external,"gpu_info.txt").toPath(),4096,false);
         out.append("\nActive GPU report (native status file)\n");

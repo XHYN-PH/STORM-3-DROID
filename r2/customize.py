@@ -25,6 +25,13 @@ def customize(root):
  launcher=smali/'com/naruto/port/LauncherActivity.smali';game=smali/'com/naruto/port/NarutoActivity.smali';touch=smali/'a/f0.smali';controller=smali/'com/naruto/port/ControllerMapActivity.smali'
  change(launcher,'.method public final onCreate(Landroid/os/Bundle;)V',lambda b:returns(start(b,call('GameHooks','beforeLauncher(Landroid/app/Activity;)V')),call('LauncherUi','install(Lcom/naruto/port/LauncherActivity;)V')))
  change(launcher,'.method public final t()V',lambda b:returns(b,call('GameHooks','config(Landroid/app/Activity;)V')))
+ # Extend the stock driver flow instead of introducing another picker or loader.
+ change(smali/'a/l.smali','.method public static o()Z',lambda b:'.method public static o()Z\n    .locals 1\n    invoke-static {}, Lcom/naruto/r2/DriverSupport;->available()Z\n    move-result v0\n    return v0\n.end method')
+ change(smali/'a/l.smali','.method public static j(Landroid/content/Context;Ljava/io/InputStream;)La/k;',lambda b:'.method public static j(Landroid/content/Context;Ljava/io/InputStream;)La/k;\n    .locals 1\n    invoke-static {p0, p1}, Lcom/naruto/r2/DriverSupport;->importDriver(Landroid/content/Context;Ljava/io/InputStream;)La/k;\n    move-result-object v0\n    return-object v0\n.end method')
+ change(launcher,'.method public final m()La/k;',lambda b:'.method public final m()La/k;\n    .locals 1\n    invoke-static {p0}, Lcom/naruto/r2/DriverSupport;->selected(Lcom/naruto/port/LauncherActivity;)La/k;\n    move-result-object v0\n    return-object v0\n.end method')
+ source=launcher.read_text().replace('.method public final l(Ljava/lang/String;)V','.method public final r2OriginalSelectDriver(Ljava/lang/String;)V')
+ source+='\n.method public final l(Ljava/lang/String;)V\n    .locals 0\n    invoke-static {p0, p1}, Lcom/naruto/r2/DriverSupport;->select(Lcom/naruto/port/LauncherActivity;Ljava/lang/String;)V\n    return-void\n.end method\n'
+ launcher.write_text(source)
  # Extend the existing Send log action and its strict provider whitelist.
  source=launcher.read_text().replace('.method public final n(Z)V','.method public final r2OriginalSendLog(Z)V')
  source+='\n.method public final n(Z)V\n    .locals 0\n    invoke-static {p0, p1}, Lcom/naruto/r2/SessionDetails;->share(Lcom/naruto/port/LauncherActivity;Z)V\n    return-void\n.end method\n'
@@ -111,7 +118,7 @@ def customize(root):
  strings=root/'res/values/strings.xml';text=strings.read_text();text,n=re.subn(r'(<string name="app_name">)[^<]*(</string>)',r'\g<1>STORM 3\2',text);assert n==1;strings.write_text(text)
  image=root/'res/drawable/storm3_icon.png';image.parent.mkdir(exist_ok=True);shutil.copyfile(ROOT/'assets/storm3_icon.png',image)
  manifest=root/'AndroidManifest.xml';text=manifest.read_text().replace('android:icon="@mipmap/ic_storm3"','android:icon="@drawable/storm3_icon"').replace('android:roundIcon="@mipmap/ic_storm3"','android:roundIcon="@drawable/storm3_icon"');manifest.write_text(text)
- yaml=root/'apktool.yml';text=yaml.read_text().replace('  versionCode: 47','  versionCode: 51').replace('  versionName: R1','  versionName: R2.3');yaml.write_text(text)
+ yaml=root/'apktool.yml';text=yaml.read_text().replace('  versionCode: 47','  versionCode: 52').replace('  versionName: R1','  versionName: R2.4');yaml.write_text(text)
  print('PASS: refined R2 menus, performance/lifecycle hooks, stock controls, app name/icon and version applied.')
 if __name__=='__main__':
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('decoded',type=Path);customize(p.parse_args().decoded)

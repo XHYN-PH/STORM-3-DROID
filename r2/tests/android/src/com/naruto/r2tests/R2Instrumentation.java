@@ -134,6 +134,8 @@ public final class R2Instrumentation extends Instrumentation {
         testModernMenu(context,loader);
         testShutdownAndLookup(context,loader);
         testSessionDetailsAndClosing(context,loader);
+        testDriverSupport(context,loader);
+        testNativeSampling(context,loader);
         Class<?> game=Class.forName("com.naruto.port.NarutoActivity",true,loader);
         for(String bridge:new String[]{"r2ShaderPrepare","r2StatsValues","r2SetTouch","r2SetShowStats","r2ShadowSet"}){boolean exposed=false;for(Method method:game.getDeclaredMethods())if(method.getName().equals(bridge))exposed=java.lang.reflect.Modifier.isPublic(method.getModifiers())&&java.lang.reflect.Modifier.isStatic(method.getModifiers());check(exposed,"Native bridge is accessible to runtime helpers: "+bridge);}
 
@@ -216,6 +218,16 @@ public final class R2Instrumentation extends Instrumentation {
                 android.graphics.Bitmap cached=region(touchView[0]);
                 check(samePixels(original,cached),"Cached stock touch artwork matches original rendering, button mask "+mask);original.recycle();cached.recycle();
             }
+            Object[] compactButtons=(Object[])touchClass.getField("a").get(touchView[0]);boolean[] hidden=new boolean[compactButtons.length];
+            Object compact=compactButtons[0];float previousX=compact.getClass().getField("j").getFloat(compact);
+            for(int i=0;i<compactButtons.length;i++)hidden[i]=compactButtons[i].getClass().getField("p").getBoolean(compactButtons[i]);
+            try {
+                runOnMainSync(()->{try{for(Object button:compactButtons)button.getClass().getField("p").setBoolean(button,button!=compact);compact.getClass().getField("j").setFloat(compact,touchView[0].getWidth()*.2f);enabled.setBoolean(state,false);touchView[0].invalidate();}catch(Throwable e){error[0]=e;}});
+                android.graphics.Bitmap fullLayer=region(touchView[0]);
+                runOnMainSync(()->{try{enabled.setBoolean(state,true);touchView[0].invalidate();}catch(Throwable e){error[0]=e;}});android.graphics.Bitmap boundedLayer=region(touchView[0]);
+                check(samePixels(fullLayer,boundedLayer),"Compact custom layouts preserve caption/glow pixels and grouped opacity with tighter compositing bounds");fullLayer.recycle();boundedLayer.recycle();
+                check(state.getClass().getField("layerArea").getFloat(state)<state.getClass().getField("originalLayerArea").getFloat(state)*.85f,"A compact control layout uses a smaller transparency layer");
+            }finally{runOnMainSync(()->{try{for(int i=0;i<compactButtons.length;i++)compactButtons[i].getClass().getField("p").setBoolean(compactButtons[i],hidden[i]);compact.getClass().getField("j").setFloat(compact,previousX);touchView[0].invalidate();}catch(Throwable e){error[0]=e;}});}
             int recorded=recordings.getInt(state),hit=hits.getInt(state);
             runOnMainSync(()->touchView[0].invalidate());waitForIdleSync();SystemClock.sleep(100);
             check(recordings.getInt(state)==recorded&&hits.getInt(state)>hit,"Unchanged buttons reuse recorded artwork without rebuilding gradients");
@@ -291,14 +303,14 @@ public final class R2Instrumentation extends Instrumentation {
         final java.util.concurrent.atomic.AtomicReference<Intent> captured=new java.util.concurrent.atomic.AtomicReference<>();
         ActivityMonitor monitor=new ActivityMonitor(){@Override public ActivityResult onStartActivity(Intent intent){if(Intent.ACTION_CHOOSER.equals(intent.getAction())){captured.set(intent);return new ActivityResult(Activity.RESULT_CANCELED,null);}return null;}};
         try {
-            long now=System.currentTimeMillis();String session="Session started epoch ms: "+(now-1000)+"\nSnapshot epoch ms: "+now+"\nLast foreground Android display rate: 60.00 Hz\nPhase: paused\nApp: STORM 3 R2.3\n";
+            long now=System.currentTimeMillis();String session="Session started epoch ms: "+(now-1000)+"\nSnapshot epoch ms: "+now+"\nLast foreground Android display rate: 60.00 Hz\nPhase: paused\nApp: STORM 3 R2.4\n";
             java.nio.file.Files.write(privateFile.toPath(),session.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             java.nio.file.Files.write(log.toPath(),"0.1 Render resolution 1600x900 (1.25x)\n1.0 AMD optical FG: 2x (asked 2x, screen 121 Hz)\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             java.nio.file.Files.write(gpu.toPath(),"GPU: Turnip Adreno (TM) 750\nvendor 5143, driver test, Vulkan 1.4\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             prefs.edit().putString("r23_private_test","PRIVATE_GAME_PATH_DO_NOT_SHARE").putString("r23_token_test","PRIVATE_TOKEN_DO_NOT_SHARE").commit();
             Method selected=details.getDeclaredMethod("selected",Context.class);selected.setAccessible(true);String current=(String)selected.invoke(null,launcher);
             String report=(String)details.getMethod("prepare",Context.class,String.class).invoke(null,context,current);
-            check(report.contains("App: STORM 3 R2.3")&&report.contains("Refresh selected:")&&report.contains("Frame generation selected:"),"Stock log details include app version and selected graphics settings");
+            check(report.contains("App: STORM 3 R2.4")&&report.contains("Refresh selected:")&&report.contains("Frame generation selected:"),"Stock log details include app version and selected graphics settings");
             check(report.contains("60.00 Hz")&&report.contains("2x / 2x / 121 Hz")&&report.contains("1600x900"),"Foreground display observations and final engine reports remain separately labelled");
             check(!report.contains("PRIVATE_GAME_PATH_DO_NOT_SHARE")&&!report.contains("PRIVATE_TOKEN_DO_NOT_SHARE"),"Log details never dump arbitrary preferences or game paths");
             android.net.Uri uri=android.net.Uri.parse("content://"+context.getPackageName()+".logs/session-details.txt");
@@ -334,6 +346,59 @@ public final class R2Instrumentation extends Instrumentation {
             } finally {if(lock.isValid())lock.release();runOnMainSync(()->{try{exit.getMethod("destroy",Activity.class).invoke(null,launcher);}catch(Exception e){throw new RuntimeException(e);}});marker.delete();}
         }
     }
+    private byte[] driverZip(String metadata)throws Exception {
+        byte[] elf=new byte[64];elf[0]=127;elf[1]='E';elf[2]='L';elf[3]='F';elf[4]=2;elf[5]=1;elf[6]=1;elf[16]=3;elf[18]=(byte)183;
+        ByteArrayOutputStream bytes=new ByteArrayOutputStream();try(java.util.zip.ZipOutputStream zip=new java.util.zip.ZipOutputStream(bytes)){
+            zip.putNextEntry(new java.util.zip.ZipEntry("meta.json"));zip.write(metadata.getBytes("UTF-8"));zip.closeEntry();
+            zip.putNextEntry(new java.util.zip.ZipEntry("libvulkan_panfrost.so"));zip.write(elf);zip.closeEntry();
+            zip.putNextEntry(new java.util.zip.ZipEntry("LICENSE-Mesa.txt"));zip.write("fixture notice".getBytes("UTF-8"));zip.closeEntry();
+        }return bytes.toByteArray();
+    }
+    private void testDriverSupport(Context context,ClassLoader loader)throws Exception {
+        Class<?> support=Class.forName("com.naruto.r2.DriverSupport",true,loader);String actual=(String)support.getMethod("gpu").invoke(null);
+        check(actual!=null,"ARM64 system-Vulkan probe links and returns without starting the game");
+        Field gpu=support.getDeclaredField("gpu");gpu.setAccessible(true);Object previous=gpu.get(null);
+        File fixture=new File(context.getFilesDir(),"r24-driver-"+java.util.UUID.randomUUID());fixture.mkdirs();
+        Context isolated=new android.content.ContextWrapper(context){@Override public File getFilesDir(){return fixture;}};
+        String metadata="{\"schemaVersion\":1,\"name\":\"PanVK-FristOneRR-V.3.7.0\",\"description\":\"Fixture\",\"driverVersion\":\"FristOneRR v3.7.0\",\"minApi\":28,\"libraryName\":\"libvulkan_panfrost.so\"}";
+        Method install=support.getMethod("importDriver",Context.class,java.io.InputStream.class),validate=support.getMethod("validate",File.class,int.class,String.class);
+        try {
+            gpu.set(null,"13b5|Mali-G57 MC2");check((Boolean)Class.forName("a.l",true,loader).getMethod("o").invoke(null),"Stock driver menu/configuration gate permits a detected Mali GPU");
+            Object driver=install.invoke(null,isolated,new java.io.ByteArrayInputStream(driverZip(metadata)));String id=(String)driver.getClass().getField("a").get(driver);
+            File directory=new File(fixture,"gpu_drivers/"+id);check(new File(directory,"LICENSE-Mesa.txt").isFile(),"Driver import keeps the package's third-party notice");
+            check(((String)driver.getClass().getField("c").get(driver)).contains("Experimental Mali"),"Imported PanVK remains explicitly experimental");
+            Object same=install.invoke(null,isolated,new java.io.ByteArrayInputStream(driverZip(metadata)));check(id.equals(same.getClass().getField("a").get(same)),"Repeated identical imports reuse the installed package");
+            try{validate.invoke(null,directory,37,"5143|Adreno 750");throw new AssertionError("PanVK on Adreno");}catch(java.lang.reflect.InvocationTargetException e){check(e.getCause() instanceof java.io.IOException,"Wrong GPU family is rejected before native driver loading");}
+            try{validate.invoke(null,directory,37,"13b5|Mali-G710");throw new AssertionError("Unsupported CSF");}catch(java.lang.reflect.InvocationTargetException e){check(e.getCause() instanceof java.io.IOException,"Linked PanVK release rejects its unsupported CSF generation");}
+            String radv="{\"schemaVersion\":1,\"name\":\"RADV Xclipse (Mesa 27.0.0-devel-269238e)\",\"driverVersion\":\"Vulkan 1.4.363\",\"minApi\":34,\"libraryName\":\"vulkan.radeon.so\"}";
+            File r=new File(fixture,"radv");r.mkdirs();java.nio.file.Files.copy(new File(directory,"libvulkan_panfrost.so").toPath(),new File(r,"vulkan.radeon.so").toPath());write(new File(r,"meta.json"),radv);
+            Object rd=validate.invoke(null,r,34,"144d|Samsung Xclipse 920");check(((String)rd.getClass().getField("c").get(rd)).contains("Experimental Xclipse"),"Official RADV metadata and library name are supported for Xclipse");
+            try{validate.invoke(null,r,33,"144d|Samsung Xclipse 920");throw new AssertionError("Old Android");}catch(java.lang.reflect.InvocationTargetException e){check(e.getCause() instanceof java.io.IOException,"RADV package minimum Android version is enforced");}
+            try(java.io.RandomAccessFile lease=new java.io.RandomAccessFile(new File(fixture,"r2-game.lock"),"rw");java.nio.channels.FileLock lock=lease.getChannel().lock()){
+                try{install.invoke(null,isolated,new java.io.ByteArrayInputStream(driverZip(metadata)));throw new AssertionError("Import while running");}catch(java.lang.reflect.InvocationTargetException e){check(e.getCause() instanceof java.io.IOException&&lock.isValid(),"Import is blocked while the engine/save lock is held and cannot release another owner's lock");}
+            }
+            java.util.List<String> stages=new java.util.ArrayList<>();for(File f:new File(fixture,"gpu_drivers").listFiles())if(f.getName().startsWith(".import-"))stages.add(f.getName());check(stages.isEmpty(),"Driver staging is cleaned after successful and refused imports");
+        }finally{gpu.set(null,previous);Class.forName("com.naruto.r2.DriverArchive",true,loader).getMethod("discard",File.class).invoke(null,fixture);}
+    }
+    private void testNativeSampling(Context context,ClassLoader loader)throws Exception {
+        Class<?> samples=Class.forName("com.naruto.r2.NativeSamples",true,loader),sourceType=Class.forName("com.naruto.r2.NativeSamples$Source",true,loader),game=Class.forName("com.naruto.port.NarutoActivity",true,loader),hooks=Class.forName("com.naruto.r2.GameHooks",true,loader),startup=Class.forName("com.naruto.r2.StartupFeedback",true,loader);
+        Field source=samples.getDeclaredField("source");source.setAccessible(true);Object original=source.get(null);Object[] instance={null};Throwable[] failure={null};
+        java.util.concurrent.CountDownLatch entered=new java.util.concurrent.CountDownLatch(1),release=new java.util.concurrent.CountDownLatch(1);java.util.concurrent.atomic.AtomicInteger reads=new java.util.concurrent.atomic.AtomicInteger();java.util.concurrent.atomic.AtomicBoolean offMain=new java.util.concurrent.atomic.AtomicBoolean();
+        Object fake=java.lang.reflect.Proxy.newProxyInstance(loader,new Class<?>[]{sourceType},(proxy,m,args)->{reads.incrementAndGet();offMain.set(android.os.Looper.myLooper()!=android.os.Looper.getMainLooper());entered.countDown();release.await(5,java.util.concurrent.TimeUnit.SECONDS);return new float[]{30,20,2000,40,600,2,60};});
+        runOnMainSync(()->{try{instance[0]=game.getConstructor().newInstance();Method attach=android.content.ContextWrapper.class.getDeclaredMethod("attachBaseContext",Context.class);attach.setAccessible(true);attach.invoke(instance[0],context);}catch(Throwable e){failure[0]=e;}});
+        if(failure[0]!=null)throw new RuntimeException(failure[0]);
+        try{
+            source.set(null,fake);hooks.getField("active").setBoolean(null,true);
+            runOnMainSync(()->{try{for(int i=0;i<5;i++)samples.getMethod("request",game).invoke(null,instance[0]);}catch(Throwable e){failure[0]=e;}});
+            check(entered.await(5,java.util.concurrent.TimeUnit.SECONDS)&&offMain.get(),"Native statistics read executes on the dedicated worker rather than the UI thread");
+            check(reads.get()==1,"Repeated UI polling cannot queue overlapping native samples");
+            runOnMainSync(()->{try{samples.getMethod("cancel",game).invoke(null,instance[0]);}catch(Throwable e){failure[0]=e;}});release.countDown();SystemClock.sleep(200);waitForIdleSync();
+            String observed=(String)samples.getMethod("observations",game).invoke(null,instance[0]);check(observed.contains("samples 0"),"Cancelled background samples cannot publish into a paused game");
+            runOnMainSync(()->{try{startup.getMethod("begin",game).invoke(null,instance[0]);startup.getMethod("prepared",game).invoke(null,instance[0]);startup.getMethod("sample",game,float[].class).invoke(null,instance[0],new float[]{30});}catch(Throwable e){failure[0]=e;}});
+            check(!(Boolean)startup.getMethod("waiting",game).invoke(null,instance[0]),"Startup feedback completes after the first valid game FPS observation");
+            if(failure[0]!=null)throw new RuntimeException(failure[0]);
+        }finally{release.countDown();runOnMainSync(()->{try{samples.getMethod("destroy",game).invoke(null,instance[0]);startup.getMethod("destroy",game).invoke(null,instance[0]);}catch(Exception e){throw new RuntimeException(e);}});source.set(null,original);}
+    }
     @Override public void onStart() {
         Thread watchdog=new Thread(()->{try{Thread.sleep(120000);}catch(InterruptedException done){return;}if(completed)return;StringBuilder trace=new StringBuilder();for(java.util.Map.Entry<Thread,StackTraceElement[]> entry:Thread.getAllStackTraces().entrySet())if(entry.getKey().getName().equals("main")||entry.getKey().getName().contains("Instr")){trace.append(entry.getKey().getName()).append('\n');int n=0;for(StackTraceElement frame:entry.getValue()){trace.append(frame).append('\n');if(++n==12)break;}}Bundle status=new Bundle();status.putString("stream",trace+"R2_STALL_STAGE="+lastProgress+"\n");sendStatus(1,status);},"R2-watchdog");watchdog.setDaemon(true);watchdog.start();
         Bundle result=new Bundle(); Context context=getTargetContext();
@@ -341,7 +406,7 @@ public final class R2Instrumentation extends Instrumentation {
         boolean originalLogging=prefs.getBoolean("logging_enabled",false);
         boolean originalPt=prefs.getBoolean("menu_ptbr",false);
         try {
-            check("R2.3".equals(context.getPackageManager().getPackageInfo(context.getPackageName(),0).versionName),"Installed version is R2.3");
+            check("R2.4".equals(context.getPackageManager().getPackageInfo(context.getPackageName(),0).versionName),"Installed version is R2.4");
             check(!originalLogging,"Logging defaults to off on a fresh install");
             ClassLoader loader=context.getClassLoader();
             Class<?> control=Class.forName("com.naruto.port.LoggingControl",true,loader);

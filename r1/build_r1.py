@@ -69,11 +69,14 @@ def build(args):
     verification_version = ['--version-name', 'R1', '--version-code', '47']
     if args.r2:
         r2 = ROOT.parent/'r2'
+        run(compiler, '-shared', '-fPIC', '-O2', '-std=c11', '-Wall', '-Wextra', '-Werror',
+            '-fvisibility=hidden', '-Wl,-z,relro,-z,now', '-Wl,-z,max-page-size=16384',
+            r2/'native/gpu_probe.c', '-ldl', '-o', decoded/'lib/arm64-v8a/libxhyngpu.so')
         run(sys.executable, r2/'compile_runtime.py', '--android-jar', args.android_jar,
             '--build-tools', args.build_tools, '--upstream', original, '--apktool', args.apktool)
         run(sys.executable, r2/'customize.py', decoded)
         run(sys.executable, r2/'verify_linkage.py', decoded)
-        verification_version = ['--version-name', 'R2.3', '--version-code', '51']
+        verification_version = ['--version-name', 'R2.4', '--version-code', '52']
     run(sys.executable, ROOT/'verify_sources.py', '--original', original, '--decoded', decoded, *verification_version)
     unsigned = work/'R1-unsigned.apk'
     aligned = work/'R1-aligned.apk'
@@ -90,7 +93,7 @@ def build(args):
         if 'lib/arm64-v8a/libxhynlog.so' not in apk.namelist():
             raise ValueError('Missing native logging helper')
     report = json.loads((ROOT/'translation-report.json').read_text())
-    report.update({'version': 'R2.3' if args.r2 else 'R1', 'version_code': 51 if args.r2 else 47, 'built': True, 'signed': True,
+    report.update({'version': 'R2.4' if args.r2 else 'R1', 'version_code': 52 if args.r2 else 47, 'built': True, 'signed': True,
                    'native_logging_helper_compiled': True, 'artifact_sha256': digest(out),
                    'host_logging_assertions': 85, 'android_runtime_tested': False})
     (out.parent/'build-report.json').write_text(json.dumps(report, indent=2, ensure_ascii=False)+'\n')

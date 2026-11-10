@@ -23,6 +23,7 @@ public final class TouchRender {
         public boolean enabled = true;
         public int recordings, hits;
         public int stickRecordings,stickHits;
+        public float layerArea,originalLayerArea;
         final RenderNode[] stickNodes=new RenderNode[4];
         float stickRadius=Float.NaN;
     }
@@ -133,10 +134,15 @@ public final class TouchRender {
         if (view.o || !state(view).enabled) return canvas.saveLayerAlpha(left, top, right, bottom, alpha);
         RectF ink = state(view).layer;
         ink.setEmpty();
-        // Generous bounds include the pressed glow, label shadow and combo badges.
-        // Keep the full width because labels are clamped to screen edges by stock code.
-        for (c0 b : view.a) if (!b.p) ink.union(left, b.k - 1.7f * b.l - .04f * view.U,
-                right, b.k + 2.7f * b.l + .08f * view.U);
+        // Include the glow, clamped captions, caption shadow and controller/combo badges.
+        // 12 em on either side exceeds every fixed English caption in the stock renderer.
+        for (c0 b : view.a) if (!b.p) {
+            float caption=12*Math.max(view.U*.016f,b.l*.24f)+view.U*.02f;
+            float center=Math.max(left+caption,Math.min(right-caption,b.j));
+            float x0=Math.min(b.j-1.7f*b.l-view.U*.04f,center-caption);
+            float x1=Math.max(b.j+1.7f*b.l+view.U*.04f,center+caption);
+            ink.union(x0,b.k-1.7f*b.l-.04f*view.U,x1,b.k+2.7f*b.l+.08f*view.U);
+        }
         e0 s = view.w;
         float x = s.a != -1 ? s.b : view.y + (s.b - view.y) * s.h;
         float y = s.a != -1 ? s.c : view.z + (s.c - view.z) * s.h;
@@ -144,9 +150,11 @@ public final class TouchRender {
         ink.union(x-r, y-r, x+r, y+r);
         // The stock secondary-stick marker remains part of the stock overlay.
         if (view.x.a != -1) { r = view.B * .4f + view.U * .01f; ink.union(view.x.b-r, view.x.c-r, view.x.b+r, view.x.c+r); }
-        if (ink.isEmpty() || !Float.isFinite(ink.top) || !Float.isFinite(ink.bottom))
+        if (ink.isEmpty() || !Float.isFinite(ink.left)||!Float.isFinite(ink.right)||!Float.isFinite(ink.top) || !Float.isFinite(ink.bottom))
             return canvas.saveLayerAlpha(left, top, right, bottom, alpha);
-        return canvas.saveLayerAlpha(left, Math.max(top, ink.top), right, Math.min(bottom, ink.bottom), alpha);
+        ink.set(Math.max(left,ink.left),Math.max(top,ink.top),Math.min(right,ink.right),Math.min(bottom,ink.bottom));
+        state(view).originalLayerArea=Math.max(0,right-left)*Math.max(0,bottom-top);state(view).layerArea=Math.max(0,ink.width())*Math.max(0,ink.height());
+        return canvas.saveLayerAlpha(ink.left,ink.top,ink.right,ink.bottom,alpha);
     }
     public static void release(f0 view) {
         State state = view.r2RenderState;

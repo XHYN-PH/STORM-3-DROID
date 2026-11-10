@@ -1,7 +1,7 @@
 name: R2 real activity startup check
 on:
   push:
-    paths: ['.github/workflows/r2-startup.yml', 'r2/tests/android/startup_smoke.py', 'r2/src/**/*.java', 'r2/customize.py', 'r2/verify_linkage.py']
+    paths: ['.github/workflows/r2-startup.yml', 'r2/tests/android/startup_smoke.py', 'r2/src/**/*.java', 'r2/native/**', 'r1/build_r1.py', 'r2/customize.py', 'r2/verify_linkage.py']
   workflow_dispatch:
 permissions:
   contents: read

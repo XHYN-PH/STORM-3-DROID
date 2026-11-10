@@ -27,6 +27,9 @@ public class RuntimeMathTest {
   check(!Performance.recoveryAllowed(false,true,false,0)&&!Performance.recoveryAllowed(true,false,false,0),"Background or unfocused windows cannot force a display change");
   check(!Performance.recoveryAllowed(true,true,true,0),"Closing activities cannot request a display change");
   check(!Performance.recoveryAllowed(true,true,false,2),"Display recovery has a bounded retry budget");
+  check(Performance.rateMatches(60,59.94f),"Fractional display rates do not trigger recovery loops");
+  check(!Performance.rateMatches(60,120),"A changed refresh can be detected even when the mode ID stays the same");
+  check(!Performance.rateMatches(Float.NaN,60),"Unavailable refresh is not a valid match");
   System.out.println("PASS: "+checks+" display/configuration/performance assertions");
  }
 }
