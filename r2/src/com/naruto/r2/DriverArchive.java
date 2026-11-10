@@ -22,7 +22,11 @@ public final class DriverArchive {
                 if(++entries>128)throw new IOException("Driver ZIP contains too many entries.");
                 String path=entry.getName();if(path.startsWith("/")||path.indexOf('\\')>=0||path.indexOf(':')>=0||path.indexOf('\0')>=0)throw new IOException("Invalid driver ZIP path.");
                 for(String part:path.split("/"))if(part.equals("..")||part.equals("."))throw new IOException("Invalid driver ZIP path.");
-                if(entry.isDirectory())continue;
+                if(entry.isDirectory()){
+                    // getNextEntry() would otherwise inflate a directory's hidden payload outside our size counter.
+                    if(zip.read(buffer)!=-1)throw new IOException("Driver ZIP directory entries must be empty.");
+                    continue;
+                }
                 String name=new File(path).getName();
                 if(name.isEmpty()||name.startsWith(".")||!names.add(name))throw new IOException("Duplicate or invalid filename in driver ZIP.");
                 try(OutputStream out=new FileOutputStream(new File(directory,name))){int n,empty=0;

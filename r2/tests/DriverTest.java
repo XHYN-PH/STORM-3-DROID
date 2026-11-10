@@ -33,6 +33,10 @@ public class DriverTest {
    rejects(()->extract(zip("../outside"),Files.createDirectory(root.resolve("traversal"))),"Traversal ZIP rejected");
    rejects(()->extract(zip("/absolute"),Files.createDirectory(root.resolve("absolute"))),"Absolute ZIP rejected");
    rejects(()->extract(zip("a/meta.json","b/meta.json"),Files.createDirectory(root.resolve("duplicate"))),"Flattened duplicate names rejected");
+   rejects(()->extract(zip("directory/"),Files.createDirectory(root.resolve("directory-payload"))),"A directory cannot bypass expanded-file bounds with a hidden payload");
+   ByteArrayOutputStream emptyDirectory=new ByteArrayOutputStream();try(ZipOutputStream out=new ZipOutputStream(emptyDirectory)){out.putNextEntry(new ZipEntry("folder/"));out.closeEntry();out.putNextEntry(new ZipEntry("folder/meta.json"));out.write(1);out.closeEntry();}
+   Path emptyRoot=Files.createDirectory(root.resolve("empty-directory"));extract(emptyDirectory.toByteArray(),emptyRoot);
+   check(Files.isRegularFile(emptyRoot.resolve("meta.json")),"Ordinary empty directory entries remain compatible with flat extraction");
    rejects(()->extract(zip(),Files.createDirectory(root.resolve("empty"))),"Empty ZIP rejected");
    String[] many=new String[129];for(int i=0;i<many.length;i++)many[i]="f"+i;
    rejects(()->extract(zip(many),Files.createDirectory(root.resolve("many"))),"Excessive ZIP entry count rejected");
