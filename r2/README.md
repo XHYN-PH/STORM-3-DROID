@@ -1,4 +1,4 @@
-# STORM 3 — R2.3 customization
+# STORM 3 — R2.4 customization
 
 Modified and Translated by **XHYN_PH**.
 
@@ -7,6 +7,8 @@ R2.1 fixes the game-start crash caused by inaccessible native methods. The origi
 R2 keeps the launcher layout and stock controller mapping screen, with a shared dark Material theme, rounded dialogs and gold accents. Added settings stay in one compact **More options** card.
 
 ## Included
+
+- R2.4: [experimental Mali/Xclipse imports](DRIVERS.md), native statistics on a single worker, first-frame startup feedback, refreshed surface hints, tighter transparency-layer bounds and more useful stock Send log details. Native stalls and FG queue tuning still need a phone trace.
 
 - R2.3: foreground-only display recovery, separate game/output FPS labels, lighter compact statistics, cached left-stick artwork, stock Send log context and launcher shutdown feedback. Native frame-stall attribution still needs a phone trace.
 
@@ -55,7 +57,7 @@ python3 r1/build_r1.py --r2 \
   --build-tools /path/to/build-tools/35.0.0 \
   --keystore /private/path/release.p12 \
   --password-file /private/path/keystore.pass \
-  --output /path/to/STORM-3-R2.3-arm64.apk
+  --output /path/to/STORM-3-R2.4-arm64.apk
 ```
 
 `compile_runtime.py` compiles the added Java classes using signature-only stubs for upstream classes. Those stubs are excluded from the DEX. Apktool disassembles the runtime and `customize.py` applies checked hooks to the translated base. All engine executable sections, bundled data and notices remain protected by source verification. R1 builds keep their original defaults unless `--r2` is explicitly supplied.

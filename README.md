@@ -7,7 +7,7 @@
 
 An English Android edition of the STORM 3 Full Burst native port, with refined menus, save backups and a smaller, adjustable FPS panel.
 
-[**Download the latest APK**](https://github.com/XHYN-PH/STORM-3-DROID/releases/latest) · [**R2.3 changes**](CHANGELOG_R2.3.md) · [**YouTube**](https://youtube.com/@xhyn_ph)
+[**Download the latest APK**](https://github.com/XHYN-PH/STORM-3-DROID/releases/latest) · [**R2.4 changes**](CHANGELOG_R2.4.md) · [**YouTube**](https://youtube.com/@xhyn_ph)
 
 </div>
 
@@ -23,7 +23,8 @@ Based on the original Android **v0.6.16** release.
 | Settings and game menu | Legacy Android dialogs | Rounded dark menus with gold accents |
 | Menu effects | Decorative particle bursts | Particles removed; simple bounce and press feedback retained |
 | FPS/statistics panel | Fixed size | Smaller by default, with a **50–125%** size slider, separate game/output FPS and lighter collapsed mode |
-| Repeated interface work | Artwork rebuilt during redraws; statistics memory reads on the UI thread | Cached buttons and stick artwork, fewer unnecessary redraws and background statistics collection |
+| Repeated interface work | Artwork rebuilt during redraws; statistics reads on the UI thread | Cached buttons/stick artwork, tighter compositing bounds and background native/memory statistics collection |
+| GPU driver imports | Qualcomm-only menu/configuration | Adreno imports plus experimental PanVK for compatible Mali and RADV for compatible Xclipse |
 | Logging | Regular app log capture | Optional Logging switch, off by default; original **Send log** now includes a session-details attachment |
 | Save management | Save import | Import, export, backups and protected restoration |
 | Display choices | Fit and Stretch | Fit, Stretch and proportional Crop to fill |
@@ -35,8 +36,8 @@ The original touch layout and controller mapping screen are retained. The added 
 
 You need **Android 11 or newer**, a **64-bit ARM device**, Vulkan support, and the game's files. Game files are not included in the APK.
 
-1. Open the [latest release](https://github.com/XHYN-PH/STORM-3-DROID/releases/latest) and download **STORM-3-R2.3-arm64.apk**.
-2. Install the APK. R1, R2, R2.1 and R2.2 users can update directly, without uninstalling or resetting app data.
+1. Open the [latest release](https://github.com/XHYN-PH/STORM-3-DROID/releases/latest) and download **STORM-3-R2.4-arm64.apk**.
+2. Install the APK. R1, R2, R2.1, R2.2 and R2.3 users can update directly, without uninstalling or resetting app data.
 3. Open **STORM 3**, select the extracted game folder containing `default.xex`, then tap **Play**.
 
 If Android reports a signing conflict with the original upstream app, back up your saves before replacing that installation. This fork uses its own signing key.
@@ -53,9 +54,17 @@ If Android reports a signing conflict with the original upstream app, back up yo
 
 ## GPU drivers
 
-Rendering uses **Vulkan**. The system GPU driver is available by default. Compatible Qualcomm/Adreno devices can import custom drivers such as Turnip through **GPU Driver → Change → Import driver**, using the app's AdrenoTools integration. Importing an Adreno driver does not add support for other GPU families.
+Rendering uses **Vulkan**, with the system GPU driver available by default. Open **GPU Driver → Change → Import driver** to install a compatible Android Vulkan ZIP. Imports and changes are blocked while the game is running or a save operation holds its lock.
+
+- **Adreno:** compatible Turnip/AdrenoTools packages.
+- **Mali:** experimental PanVK imports. The linked FristOneRR 3.7.0 release targets specific older Mali families and excludes newer CSF/Immortalis GPUs.
+- **Samsung Xclipse:** experimental RADV Xclipse imports. The linked v1.8.0 package requires Android 14 or newer.
+
+The app checks the GPU family, package minimum Android version, archive contents and ARM64 library headers. Driver packages are not included in the APK. These additional import/loading paths still need STORM 3 gameplay testing on real Mali/Xclipse devices. See [driver requirements and downloads](r2/DRIVERS.md).
 
 ## Release history
+
+- [R2.4 — Experimental Mali/Xclipse drivers, background sampling and startup refinements](CHANGELOG_R2.4.md)
 
 - [R2.3 — Clearer FPS, lighter overlays, better logs and exit feedback](CHANGELOG_R2.3.md)
 - [R2.2 — Smaller statistics panel and interface optimizations](CHANGELOG_R2.2.md)

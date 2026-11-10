@@ -120,6 +120,9 @@ public final class R2Instrumentation extends Instrumentation {
         check(hasText(views,"More options"),"Stock launcher contains one compact More options card");
         android.graphics.drawable.Drawable icon=context.getApplicationInfo().loadIcon(context.getPackageManager());android.graphics.Bitmap iconImage=android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888);icon.setBounds(0,0,64,64);icon.draw(new android.graphics.Canvas(iconImage));check(android.graphics.Color.alpha(iconImage.getPixel(0,0))==0&&android.graphics.Color.alpha(iconImage.getPixel(32,32))>0,"Circular app icon has transparent corners and an opaque center");iconImage.recycle();
         check(Class.forName("a.a0",true,loader).getDeclaredMethod("setValues",float[].class)!=null,"Patched stock statistics class verifies on Android");
+        testSessionDetailsAndClosing(context,loader);
+        testDriverSupport(context,loader);
+        testNativeSampling(context,loader);
         View display=null;for(View v:views)if(v instanceof TextView&&"Display".contentEquals(((TextView)v).getText()))display=v;
         check(display!=null,"Stock More options card exposes Display");final View displayButton=display;
         runOnMainSync(()->displayButton.performClick());waitForIdleSync();
@@ -133,9 +136,6 @@ public final class R2Instrumentation extends Instrumentation {
         check(Math.abs(((Float)math.getMethod("cropScale",float.class,float.class,int.class).invoke(null,2400f,1080f,100))-1.25f)<.001f,"Proportional crop uses equal scale for both dimensions");
         testModernMenu(context,loader);
         testShutdownAndLookup(context,loader);
-        testSessionDetailsAndClosing(context,loader);
-        testDriverSupport(context,loader);
-        testNativeSampling(context,loader);
         Class<?> game=Class.forName("com.naruto.port.NarutoActivity",true,loader);
         for(String bridge:new String[]{"r2ShaderPrepare","r2StatsValues","r2SetTouch","r2SetShowStats","r2ShadowSet"}){boolean exposed=false;for(Method method:game.getDeclaredMethods())if(method.getName().equals(bridge))exposed=java.lang.reflect.Modifier.isPublic(method.getModifiers())&&java.lang.reflect.Modifier.isStatic(method.getModifiers());check(exposed,"Native bridge is accessible to runtime helpers: "+bridge);}
 
@@ -301,6 +301,7 @@ public final class R2Instrumentation extends Instrumentation {
         for(int i=0;i<files.length;i++)if(files[i].isFile())previous[i]=java.nio.file.Files.readAllBytes(files[i].toPath());
         SharedPreferences prefs=context.getSharedPreferences("naruto",0);boolean hadDirectory=prefs.contains("r23_private_test"),hadToken=prefs.contains("r23_token_test");String oldDirectory=prefs.getString("r23_private_test",null),oldToken=prefs.getString("r23_token_test",null);
         final java.util.concurrent.atomic.AtomicReference<Intent> captured=new java.util.concurrent.atomic.AtomicReference<>();
+        boolean monitorAdded=false;
         ActivityMonitor monitor=new ActivityMonitor(){@Override public ActivityResult onStartActivity(Intent intent){if(Intent.ACTION_CHOOSER.equals(intent.getAction())){captured.set(intent);return new ActivityResult(Activity.RESULT_CANCELED,null);}return null;}};
         try {
             long now=System.currentTimeMillis();String session="Session started epoch ms: "+(now-1000)+"\nSnapshot epoch ms: "+now+"\nLast foreground Android display rate: 60.00 Hz\nPhase: paused\nApp: STORM 3 R2.4\n";
@@ -310,7 +311,7 @@ public final class R2Instrumentation extends Instrumentation {
             prefs.edit().putString("r23_private_test","PRIVATE_GAME_PATH_DO_NOT_SHARE").putString("r23_token_test","PRIVATE_TOKEN_DO_NOT_SHARE").commit();
             Method selected=details.getDeclaredMethod("selected",Context.class);selected.setAccessible(true);String current=(String)selected.invoke(null,launcher);
             String report=(String)details.getMethod("prepare",Context.class,String.class).invoke(null,context,current);
-            check(report.contains("App: STORM 3 R2.4")&&report.contains("Refresh selected:")&&report.contains("Frame generation selected:"),"Stock log details include app version and selected graphics settings");
+            check(report.contains("App: STORM 3 R2.4")&&report.contains("Refresh selected:")&&report.contains("Frame generation selected:")&&report.contains("Renderer observations in bounded log excerpt"),"Stock log details include app version and selected graphics settings");
             check(report.contains("60.00 Hz")&&report.contains("2x / 2x / 121 Hz")&&report.contains("1600x900"),"Foreground display observations and final engine reports remain separately labelled");
             check(!report.contains("PRIVATE_GAME_PATH_DO_NOT_SHARE")&&!report.contains("PRIVATE_TOKEN_DO_NOT_SHARE"),"Log details never dump arbitrary preferences or game paths");
             android.net.Uri uri=android.net.Uri.parse("content://"+context.getPackageName()+".logs/session-details.txt");
@@ -318,7 +319,7 @@ public final class R2Instrumentation extends Instrumentation {
             try{context.getContentResolver().openInputStream(android.net.Uri.parse("content://"+context.getPackageName()+".logs/r2-last-session.txt"));throw new AssertionError("Private metadata exposed");}catch(java.io.FileNotFoundException expected){check(true,"Provider whitelist still rejects private files");}
             log.setLastModified(now-60000);report=(String)details.getMethod("prepare",Context.class,String.class).invoke(null,context,current);
             check(report.contains("Not established")&&!report.contains("Engine render resolution:"),"Old renderer logs are not presented as observations from the current session");
-            log.setLastModified(System.currentTimeMillis());addMonitor(monitor);
+            log.setLastModified(System.currentTimeMillis());addMonitor(monitor);monitorAdded=true;
             runOnMainSync(()->{try{launcher.getClass().getMethod("n",boolean.class).invoke(launcher,false);}catch(Exception e){throw new RuntimeException(e);}});
             long deadline=SystemClock.uptimeMillis()+5000;while(captured.get()==null&&SystemClock.uptimeMillis()<deadline)SystemClock.sleep(20);
             check(captured.get()!=null,"Original Send log still opens its normal share chooser");
@@ -326,7 +327,7 @@ public final class R2Instrumentation extends Instrumentation {
             for(android.net.Uri attachment:attachments){foundNative|="naruto.log".equals(attachment.getLastPathSegment());foundDetails|="session-details.txt".equals(attachment.getLastPathSegment());}
             check(foundNative&&foundDetails&&(payload.getFlags()&Intent.FLAG_GRANT_READ_URI_PERMISSION)!=0,"The existing share retains native logs and adds readable session details");
         } finally {
-            removeMonitor(monitor);SharedPreferences.Editor restore=prefs.edit();if(hadDirectory)restore.putString("r23_private_test",oldDirectory);else restore.remove("r23_private_test");if(hadToken)restore.putString("r23_token_test",oldToken);else restore.remove("r23_token_test");restore.commit();
+            if(monitorAdded)removeMonitor(monitor);SharedPreferences.Editor restore=prefs.edit();if(hadDirectory)restore.putString("r23_private_test",oldDirectory);else restore.remove("r23_private_test");if(hadToken)restore.putString("r23_token_test",oldToken);else restore.remove("r23_token_test");restore.commit();
             for(int i=0;i<files.length;i++){if(previous[i]==null)java.nio.file.Files.deleteIfExists(files[i].toPath());else java.nio.file.Files.write(files[i].toPath(),previous[i]);}
         }
         File marker=new File(context.getFilesDir(),"r2-exit.pending"),lockFile=new File(context.getFilesDir(),"r2-game.lock");
@@ -378,7 +379,28 @@ public final class R2Instrumentation extends Instrumentation {
                 try{install.invoke(null,isolated,new java.io.ByteArrayInputStream(driverZip(metadata)));throw new AssertionError("Import while running");}catch(java.lang.reflect.InvocationTargetException e){check(e.getCause() instanceof java.io.IOException&&lock.isValid(),"Import is blocked while the engine/save lock is held and cannot release another owner's lock");}
             }
             java.util.List<String> stages=new java.util.ArrayList<>();for(File f:new File(fixture,"gpu_drivers").listFiles())if(f.getName().startsWith(".import-"))stages.add(f.getName());check(stages.isEmpty(),"Driver staging is cleaned after successful and refused imports");
+            testDriverWriter(context,loader,support,install,metadata);
         }finally{gpu.set(null,previous);Class.forName("com.naruto.r2.DriverArchive",true,loader).getMethod("discard",File.class).invoke(null,fixture);}
+    }
+    private void testDriverWriter(Context context,ClassLoader loader,Class<?> support,Method install,String metadata)throws Exception {
+        SharedPreferences prefs=context.getSharedPreferences("naruto",0);java.util.Map<String,?> previous=new java.util.HashMap<>(prefs.getAll());
+        File ini=new File(context.getExternalFilesDir(null),"naruto.ini"),status=new File(context.getExternalFilesDir(null),"shadowzero.txt");
+        byte[] oldIni=ini.isFile()?java.nio.file.Files.readAllBytes(ini.toPath()):null,oldStatus=status.isFile()?java.nio.file.Files.readAllBytes(status.toPath()):null;
+        File empty=new File(context.getCacheDir(),"r24-empty-game");empty.mkdirs();File installed=null;Throwable[] failure={null};
+        try{
+            Object driver=install.invoke(null,context,new java.io.ByteArrayInputStream(driverZip(metadata)));String id=(String)driver.getClass().getField("a").get(driver);
+            installed=new File(context.getFilesDir(),"gpu_drivers/"+id);write(status,"supported=0\nname=previous driver\nreason=old failure\n");prefs.edit().putString("gameDirectory",empty.getAbsolutePath()).commit();
+            runOnMainSync(()->{try{launcher.getClass().getMethod("l",String.class).invoke(launcher,id);launcher.getClass().getMethod("t").invoke(launcher);}catch(Throwable e){failure[0]=e;}});
+            if(failure[0]!=null)throw new RuntimeException(failure[0]);
+            check(!status.exists(),"Selecting another driver clears only the old GPU compatibility result");
+            String configuration=read(ini);check(configuration.contains("env.NARUTO_GPU_DRIVER_LIBRARY = libvulkan_panfrost.so")&&configuration.contains(id+"/"),"Stock configuration writer carries a Mali package into the existing native custom-driver environment");
+            Field gpu=support.getDeclaredField("gpu");gpu.setAccessible(true);Object oldGpu=gpu.get(null);gpu.set(null,"144d|Samsung Xclipse 920");
+            try{check((Boolean)Class.forName("a.l",true,loader).getMethod("o").invoke(null),"Stock driver configuration gate also permits detected Xclipse hardware");}finally{gpu.set(null,oldGpu);}
+        }finally{
+            SharedPreferences.Editor restore=prefs.edit().clear();for(java.util.Map.Entry<String,?> e:previous.entrySet()){Object v=e.getValue();if(v instanceof String)restore.putString(e.getKey(),(String)v);else if(v instanceof Integer)restore.putInt(e.getKey(),(Integer)v);else if(v instanceof Long)restore.putLong(e.getKey(),(Long)v);else if(v instanceof Float)restore.putFloat(e.getKey(),(Float)v);else if(v instanceof Boolean)restore.putBoolean(e.getKey(),(Boolean)v);else if(v instanceof java.util.Set)restore.putStringSet(e.getKey(),(java.util.Set<String>)v);}restore.commit();
+            if(oldIni==null)ini.delete();else java.nio.file.Files.write(ini.toPath(),oldIni);if(oldStatus==null)status.delete();else java.nio.file.Files.write(status.toPath(),oldStatus);
+            if(installed!=null)Class.forName("com.naruto.r2.DriverArchive",true,loader).getMethod("discard",File.class).invoke(null,installed);empty.delete();
+        }
     }
     private void testNativeSampling(Context context,ClassLoader loader)throws Exception {
         Class<?> samples=Class.forName("com.naruto.r2.NativeSamples",true,loader),sourceType=Class.forName("com.naruto.r2.NativeSamples$Source",true,loader),game=Class.forName("com.naruto.port.NarutoActivity",true,loader),hooks=Class.forName("com.naruto.r2.GameHooks",true,loader),startup=Class.forName("com.naruto.r2.StartupFeedback",true,loader);

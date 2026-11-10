@@ -33,5 +33,5 @@ public final class NativeSamples {
     }
     public static void cancel(NarutoActivity a){State state=states.get(a);if(state!=null)state.generation++;}
     public static void destroy(NarutoActivity a){cancel(a);states.remove(a);}
-    public static String observations(NarutoActivity a){State s=states.get(a);return s==null?"Not sampled":"Background samples "+s.samples+", longest "+(s.longest/1000000L)+" ms";}
+    public static String observations(NarutoActivity a){State s=states.get(a);return s==null?"Not sampled":"Background samples "+s.samples+", longest "+String.format(java.util.Locale.ROOT,"%.3f",s.longest/1000000.0)+" ms";}
 }

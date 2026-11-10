@@ -101,6 +101,6 @@ public final class DriverSupport {
         String issue=GameHooks.prefs(c).getString("r24_driver_issue","");
         return "System GPU: "+(gpu().isEmpty()?"Unavailable":gpu().replace('|',' '))+"\nSelected: "+selectedLabel(c)
             +(issue.isEmpty()?"":"\nSelection blocked: "+issue)
-            +"\n\nTurnip: compatible Adreno devices.\nPanVK: compatible Mali devices (experimental).\nRADV Xclipse: supported Xclipse devices (experimental; the linked release needs Android 14+).\n\nImport the Android Vulkan ZIP matching the GPU and Android version. Changes apply on the next game launch. Use the system driver if gameplay fails.";
+            +"\n\nTurnip: compatible Adreno devices.\nPanVK: compatible Mali devices (experimental).\nRADV Xclipse: supported Xclipse devices (experimental).\n\nImport the Android Vulkan ZIP matching the GPU and Android version. Changes apply on the next game launch. Use the system driver if gameplay fails.";
     }
 }

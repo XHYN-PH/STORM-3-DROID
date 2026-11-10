@@ -8,8 +8,9 @@ import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 
-/** Small status files only; never opens a game save or shader-cache file. */
+/** Bounded status/log reads; never opens a game save or shader-cache file. */
 public final class SessionFiles {
+    public static final int MAX_READ=1048576;
     public static void write(Path target, String text) throws IOException {
         Path temp=Files.createTempFile(target.getParent(),"storm-status-",".tmp");
         try {
@@ -19,7 +20,7 @@ public final class SessionFiles {
         } finally { Files.deleteIfExists(temp); }
     }
     public static String read(Path file,int limit,boolean tail) throws IOException {
-        if(limit<0||limit>131072)throw new IllegalArgumentException("Invalid status-file bound");
+        if(limit<0||limit>MAX_READ)throw new IllegalArgumentException("Invalid status/log read bound");
         if(Files.isSymbolicLink(file)||!Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS))return "";
         try(RandomAccessFile input=new RandomAccessFile(file.toFile(),"r")) {
             int count=(int)Math.min(limit,input.length());

@@ -1,3 +1,19 @@
+# R2.4 follow-up from the 10-minute R2.3 capture
+
+The new capture identifies R2.3/code 51, Android 17, Adreno 750, 1080p, FSR and 2x Quality FG. Across 60 ten-second reports, median game speed is 30 FPS, render-busy time 5.065 ms and reported GPU time 14.525 ms. FG separately reports median 7.76 ms. Those measurement boundaries are not established as additive. The earlier capture used 900p and different scenes, so changes in medians are not an R2.3 benchmark.
+
+After the first 30 seconds, seven windows contain frame maxima of 120.08–262.97 ms. Two FG reports show 77/79 shown-late counters, and four native reports show 121 Hz despite 60 Hz being selected. The final Android session snapshot is paused at 120 Hz, with its last foreground observation at 60 Hz. This does not prove a sustained foreground override. FG's five-vsync lead is not a measured input-latency value. Image acquisition waits include presentation pacing and are not CPU execution time.
+
+The capture shows 701 prewarmed pipelines with zero failures. GPU allocation peaks at 864 MiB against a 2594–3080 MiB budget, and stream-cache use peaks at 10 MiB in a 64 MiB pool. No crash/device-loss/OOM is recorded. Increasing these budgets or clearing a working shader cache is not a justified performance fix.
+
+Implemented app-side changes: background native statistics reads (single worker, one outstanding read per activity, generation-checked publication), first-frame feedback using the original panel, horizontal as well as vertical bounds for grouped touch alpha, one tracked surface callback for refresh-hint reapplication, rate comparison in addition to mode IDs, a two-retry budget renewed by a later display event after a 30-second cooldown, and summary counters in the stock Send log. Compact/custom layouts can reduce the compositing area; a default layout spanning the display may see little change. No gameplay FPS gain is claimed.
+
+JNI audit: `nativeStatsValues` at `0x23fa044` writes a new Java array, calls the native counter/clock sampler at `0x23f92ac` and reads FG scalars. The real-frame count at `0x23d506c` is an acquire load from a process-lifetime counter; FG reads at `0x23c6f9c`/`0x23c6fa8` use process-lifetime scalars. The sampler maintains previous clock/counter state, so it is serialized on one worker. Android-only publication and lifecycle cancellation are tested. The engine binary remains unchanged; full gameplay/shutdown still needs phone testing.
+
+The existing `tools/capture_stall_trace.py` now captures filtered display and thermal context before/after a local Perfetto trace, plus activity/window and GPU-frequency events where available. No ADB device is connected to this cloud environment. Native stall fixes, frame-generation queue-depth changes, and a proven correction to the native presenter's deadlines remain pending that evidence. Environment/setting names in a binary are not enough to safely change synchronization.
+
+---
+
 # R2.3 performance follow-up
 
 The latest supplied renderer capture spans roughly 9.5 minutes. Its median ten-second game rate is 30 FPS, median render-busy time 5.6 ms and median reported GPU time 13.7 ms. Frame generation separately reports a median 6.7 ms; those numbers must not be added without knowing their measurement boundaries. Individual reported frame maxima still reach 154–231 ms after startup. GPU usage peaks at 836 MB against a 3566–3668 MB budget; actual streaming-cache usage peaks at 9 MB in its 64 MB pool. No renderer errors or memory pressure are recorded.

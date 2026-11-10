@@ -30,6 +30,8 @@ public class RuntimeMathTest {
   check(Performance.rateMatches(60,59.94f),"Fractional display rates do not trigger recovery loops");
   check(!Performance.rateMatches(60,120),"A changed refresh can be detected even when the mode ID stays the same");
   check(!Performance.rateMatches(Float.NaN,60),"Unavailable refresh is not a valid match");
+  check(Performance.retryBudget(2,29999)==2,"Repeated display requests stay bounded within the retry window");
+  check(Performance.retryBudget(2,30000)==0,"A later independent mode change gets a fresh recovery budget");
   System.out.println("PASS: "+checks+" display/configuration/performance assertions");
  }
 }

@@ -1,3 +1,11 @@
+# R2.4 additions
+
+The recorded session now resolves the same effective defaults as the stock configuration writer (including 30 game FPS), reads the selected driver's bounded metadata in either process, and snapshots refresh-recovery/native-sampling counters. Explicit Send log reads at most the last 1 MiB of a timestamp-matched renderer log and emits an aggregate observation summary: last upscaler path, largest reported interval, maximum per-report shown-late count, last reported FG lead and observed native-rate transitions. Missing data stays unavailable. These counters are not summed into dropped-frame rates or advertised as measured input latency. No continuous log tailer, new exporter or performance history is introduced.
+
+The original preparation panel transitions to Loading game after warming until a positive native FPS observation, a 20-second deadline, or disabling statistics. The panel passes input after preparation. FPS Off does not force native statistics collection for this status. All native sampling is single-flight on a worker and stale results are rejected after pause/destroy. These observations do not create a save or change native game shutdown.
+
+---
+
 # R2.3 session details and exit feedback
 
 The existing Send log action keeps its original chooser, native attachments and read grants. Its provider whitelist adds exactly one file, `session-details.txt`; private metadata and saves remain inaccessible through that provider. Sharing prepares the additional file off the UI thread and then calls the original share method. A metadata failure falls back to the original logs. A fresh installation without original log/status files still shows the stock No log yet message.

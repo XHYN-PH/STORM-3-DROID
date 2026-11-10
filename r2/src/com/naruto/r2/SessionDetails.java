@@ -103,7 +103,7 @@ public final class SessionDetails {
             Matcher rate=Pattern.compile("AMD optical FG: (\\d+)x \\(asked (\\d+)x, screen (\\d+) Hz\\)").matcher(tail);String latest="";
             while(rate.find())latest="Engine last reported FG / requested FG / refresh: "+rate.group(1)+"x / "+rate.group(2)+"x / "+rate.group(3)+" Hz\n";
             out.append(latest);
-            out.append(RendererReport.describe(SessionFiles.read(log.toPath(),1048576,true)));
+            out.append(RendererReport.describe(SessionFiles.read(log.toPath(),SessionFiles.MAX_READ,true)));
         }
         String gpu=SessionFiles.read(new File(external,"gpu_info.txt").toPath(),4096,false);
         out.append("\nActive GPU report (native status file)\n");

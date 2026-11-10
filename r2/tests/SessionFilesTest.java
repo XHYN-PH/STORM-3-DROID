@@ -18,7 +18,10 @@ public final class SessionFilesTest {
         check(SessionFiles.read(root.resolve("missing"),10,false).isEmpty(),"Missing optional metadata is harmless");
         Path link=root.resolve("linked");Files.createSymbolicLink(link,status);
         check(SessionFiles.read(link,100,false).isEmpty(),"Status reads do not follow symlinks");
-        try{SessionFiles.read(status,131073,false);throw new AssertionError("Accepted unbounded read");}catch(IllegalArgumentException expected){checks++;}
+        try{SessionFiles.read(status,SessionFiles.MAX_READ+1,false);throw new AssertionError("Accepted unbounded read");}catch(IllegalArgumentException expected){checks++;}
+        byte[] excerpt=new byte[SessionFiles.MAX_READ+16];java.util.Arrays.fill(excerpt,(byte)'x');excerpt[excerpt.length-1]='Z';Files.write(status,excerpt);
+        String bounded=SessionFiles.read(status,SessionFiles.MAX_READ,true);
+        check(bounded.length()==SessionFiles.MAX_READ&&bounded.endsWith("Z"),"The renderer's 1 MiB excerpt is accepted and remains bounded");
         check(SessionFiles.gameIdle(root),"Idle probe acquires and releases only the dedicated game lock");
         try(RandomAccessFile file=new RandomAccessFile(root.resolve("r2-game.lock").toFile(),"rw");FileLock lock=file.getChannel().lock()){
             check(!SessionFiles.gameIdle(root),"An existing game/save lock keeps the closing dialog waiting");
