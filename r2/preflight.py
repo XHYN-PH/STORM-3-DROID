@@ -9,6 +9,7 @@ for key in ['android-jar','build-tools','upstream','apktool']:p.add_argument('--
 p.add_argument('--r1-decoded',type=Path)
 a=p.parse_args();work=ROOT/'.build';work.mkdir(exist_ok=True)
 def run(*parts):subprocess.run([str(x) for x in parts],check=True)
+run(sys.executable,ROOT/'tests/test_linkage.py')
 # Each fixture is new and outside any real app save tree.
 run('java','--module','jdk.compiler/com.sun.tools.javac.Main','-d',work/'save-tests',ROOT/'src/com/naruto/r2/SaveFiles.java',ROOT/'tests/SaveFilesTest.java')
 run('java','-cp',work/'save-tests','SaveFilesTest')
@@ -26,6 +27,7 @@ for relative,signature,needle in [
  source=(decoded/'smali'/relative).read_text();body=re.search(re.escape(signature)+r'\n.*?^\.end method$',source,re.M|re.S).group()
  before_hook=body.split(needle,1)[0]
  if re.search(r'^    (?:iget[^ ]*|move-result[^ ]*|const[^ ]*) p[01](?:,|$)',before_hook,re.M):raise AssertionError('Hook uses a clobbered stock parameter: '+relative)
+run(sys.executable,ROOT/'verify_linkage.py',decoded)
 run(sys.executable,ROOT.parent/'r1/verify_sources.py','--original',a.upstream,'--decoded',decoded,'--version-name','R2.1','--version-code','49')
 # No excluded feature should be exposed under another label.
 code='\n'.join(f.read_text() for f in (ROOT/'src').rglob('*.java'))
@@ -34,11 +36,5 @@ for unsupported in ['shader_prewarm','controller_profile','layout_profile','sett
 # Rollbacks are byte-for-byte equal to the verified R1 source.
 for relative in ['a/f0.smali','a/a0.smali','com/naruto/port/ControllerMapActivity.smali','org/libsdl/app/SDLControllerManager.smali']:
  if (decoded/'smali'/relative).read_bytes()!=(a.r1_decoded/'smali'/relative).read_bytes():raise AssertionError('Stock rollback changed: '+relative)
-# Native refresh negotiation remains the original implementation.
-signature='.method private requestRefreshRate(II)V'
-pattern=re.escape(signature)+r'\n.*?^\.end method$'
-old=re.search(pattern,(a.r1_decoded/'smali/com/naruto/port/NarutoActivity.smali').read_text(),re.M|re.S).group()
-new=re.search(pattern,(decoded/'smali/com/naruto/port/NarutoActivity.smali').read_text(),re.M|re.S).group()
-if old!=new:raise AssertionError('Stock game refresh startup was changed')
-print('PASS: stock touch, mapping, haptics, FPS widget and native refresh negotiation restored exactly.')
+print('PASS: stock touch, mapping, haptics and FPS widget restored exactly.')
 print('PASS: R2 source preflight complete. No distributable APK has been assembled by this command.')

@@ -72,6 +72,7 @@ def build(args):
         run(sys.executable, r2/'compile_runtime.py', '--android-jar', args.android_jar,
             '--build-tools', args.build_tools, '--upstream', original, '--apktool', args.apktool)
         run(sys.executable, r2/'customize.py', decoded)
+        run(sys.executable, r2/'verify_linkage.py', decoded)
         verification_version = ['--version-name', 'R2.1', '--version-code', '49']
     run(sys.executable, ROOT/'verify_sources.py', '--original', original, '--decoded', decoded, *verification_version)
     unsigned = work/'R1-unsigned.apk'

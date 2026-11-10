@@ -1,13 +1,10 @@
-# STORM 3 — R2.1 compatibility update
+# STORM 3 — R2.1 startup fix
 
 Modified and Translated by **XHYN_PH**.
 
-- Restore the original **Send log** link and its sharing action. Only the added diagnostics exporter stays removed.
-- Restore the original fullscreen game window while keeping the refined launcher and game-options dialogs.
-- Restore the original game refresh-rate negotiation, including its automatic frame-generation behavior.
-- Move the save lock back before SDL setup and keep background statistics on the original delayed startup schedule.
-- Keep the R2 menus, performance presets, stock control mapping and protected save management.
+- Fix the loading-progress error that could close the game and return to the launcher after pressing Play.
+- Fix the same access problem in the game menu's touch reset, FPS and brightness calls.
+- Restore the original **Send log** link and sharing action. Only the added diagnostics exporter stays removed.
+- Keep the refined R2 interface, performance options, stock controller mapping and save protections.
 
-This update addresses startup compatibility after reports that R2 returns to the launcher. It still needs confirmation on affected phones.
-
-Install over R1 or R2 without uninstalling. The signing key and package name are unchanged, and the bundled 100% save remains protected. No game files are included.
+Install over R1 or R2 without uninstalling. The package and signing key are unchanged. Back up saves before updating. No game files are included.

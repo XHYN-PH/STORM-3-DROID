@@ -36,8 +36,8 @@ def customize(root):
  def game_create(body):
   needle='    invoke-super {p0, p1}, Lorg/libsdl/app/SDLActivity;->onCreate(Landroid/os/Bundle;)V'
   if body.count(needle)!=1:raise ValueError('Game framework creation changed')
-  hook=needle+'\n    invoke-virtual/range {p0 .. p0}, Landroid/app/Activity;->isFinishing()Z\n    move-result v0\n    if-eqz v0, :r2_game_lock_ok\n    return-void\n    :r2_game_lock_ok'
-  return returns(start(body.replace(needle,hook),call('GameHooks','gameStart(Landroid/app/Activity;)V')),call('GameHooks','gameReady(Landroid/app/Activity;)V'))
+  hook=needle+'\n'+call('GameHooks','gameStart(Landroid/app/Activity;)V')+'\n    invoke-virtual/range {p0 .. p0}, Landroid/app/Activity;->isFinishing()Z\n    move-result v0\n    if-eqz v0, :r2_game_lock_ok\n    return-void\n    :r2_game_lock_ok'
+  return returns(body.replace(needle,hook),call('GameHooks','gameReady(Landroid/app/Activity;)V'))
  change(game,'.method public onCreate(Landroid/os/Bundle;)V',game_create)
  change(game,'.method public onDestroy()V',lambda b:returns(b,call('GameHooks','gameStop(Landroid/app/Activity;)V')))
  # Keep the stock in-game Fit/Stretch menu authoritative when used.
@@ -52,13 +52,19 @@ def customize(root):
  for field in fields:
   source,n=re.subn(r'^\.field private (final )?('+field+r':)',r'.field public \1\2',source,flags=re.M)
   if n!=1:raise ValueError('Missing game field '+field)
- for name in ['nativeStatsValues','nativeShadowSet']:
-  source,n=re.subn(r'^\.method private static native ('+name+r'\()',r'.method public static native \1',source,flags=re.M)
-  if n!=1:raise ValueError('Missing native bridge '+name)
+ # Keep native methods private and call them through typed public bridges in their own class.
+ native_bridges=[('r2ShaderPrepare','nativeShaderPrepare','','[I'),('r2StatsValues','nativeStatsValues','','[F'),('r2SetTouch','nativeSetTouch','IIIIIII','V'),('r2SetShowStats','nativeSetShowStats','Z','V'),('r2ShadowSet','nativeShadowSet','Ljava/lang/String;Ljava/lang/String;','Z')]
+ for bridge,target,types,result in native_bridges:
+  count=types.count(';') if types.startswith('L') else len(types)
+  registers='{}' if count==0 else '{p0 .. p'+str(count-1)+'}'
+  instruction='invoke-static' if count==0 else 'invoke-static/range'
+  ending='    return-void' if result=='V' else ('    move-result-object v0\n    return-object v0' if result.startswith('[') else '    move-result v0\n    return v0')
+  source+=f"\n.method public static {bridge}({types}){result}\n    .locals {0 if result=='V' else 1}\n    {instruction} {registers}, Lcom/naruto/port/NarutoActivity;->{target}({types}){result}\n{ending}\n.end method\n"
  for method,types in [('applyStretch','Z'),('applyControllerMode','')]:
   source+=f"\n.method public r2{method[0].upper()+method[1:]}({types})V\n    .locals 0\n    invoke-direct/range {{p0 .. p{len(types)}}}, Lcom/naruto/port/NarutoActivity;->{method}({types})V\n    return-void\n.end method\n"
  source+='\n.method public r2GameThread()Ljava/lang/Thread;\n    .locals 1\n    sget-object v0, Lorg/libsdl/app/SDLActivity;->mSDLThread:Ljava/lang/Thread;\n    return-object v0\n.end method\n.method public onPause()V\n    .locals 0\n    invoke-static {p0}, Lcom/naruto/r2/GameLoop;->pause(Lcom/naruto/port/NarutoActivity;)V\n    invoke-super {p0}, Lorg/libsdl/app/SDLActivity;->onPause()V\n    return-void\n.end method\n.method public onResume()V\n    .locals 0\n    invoke-super {p0}, Lorg/libsdl/app/SDLActivity;->onResume()V\n    invoke-static {p0}, Lcom/naruto/r2/GameLoop;->resume(Lcom/naruto/port/NarutoActivity;)V\n    return-void\n.end method\n'
  game.write_text(source)
+ change(game,'.method private requestRefreshRate(II)V',lambda b:'.method private requestRefreshRate(II)V\n    .locals 0\n'+call('Performance','refresh(Lcom/naruto/port/NarutoActivity;II)V',2)+'\n    return-void\n.end method')
  change(game,'.method public onBackPressed()V',lambda b:'.method public onBackPressed()V\n    .locals 0\n'+call('GameMenu','back(Lcom/naruto/port/NarutoActivity;)V')+'\n    return-void\n.end method')
  # The original method reuses p0 for the emblem. Keep the Activity in a wrapper.
  source=game.read_text().replace('.method private applyControllerMode()V','.method private r2OriginalControllerMode()V')
@@ -88,7 +94,7 @@ def customize(root):
  shutil.copyfile(ROOT/'assets/dialog_panel.xml',root/'res/drawable/dialog_panel.xml')
  strings=root/'res/values/strings.xml';text=strings.read_text();text,n=re.subn(r'(<string name="app_name">)[^<]*(</string>)',r'\g<1>STORM 3\2',text);assert n==1;strings.write_text(text)
  image=root/'res/drawable/storm3_icon.png';image.parent.mkdir(exist_ok=True);shutil.copyfile(ROOT/'assets/storm3_icon.png',image)
- manifest=root/'AndroidManifest.xml';text=manifest.read_text().replace('android:icon="@mipmap/ic_storm3"','android:icon="@drawable/storm3_icon"').replace('android:roundIcon="@mipmap/ic_storm3"','android:roundIcon="@drawable/storm3_icon"');text=text.replace('android:name="com.naruto.port.NarutoActivity"','android:name="com.naruto.port.NarutoActivity" android:theme="@style/GameTheme"');manifest.write_text(text)
+ manifest=root/'AndroidManifest.xml';text=manifest.read_text().replace('android:icon="@mipmap/ic_storm3"','android:icon="@drawable/storm3_icon"').replace('android:roundIcon="@mipmap/ic_storm3"','android:roundIcon="@drawable/storm3_icon"');manifest.write_text(text)
  yaml=root/'apktool.yml';text=yaml.read_text().replace('  versionCode: 47','  versionCode: 49').replace('  versionName: R1','  versionName: R2.1');yaml.write_text(text)
  print('PASS: refined R2 menus, performance/lifecycle hooks, stock controls, app name/icon and version applied.')
 if __name__=='__main__':

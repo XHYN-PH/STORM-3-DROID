@@ -16,6 +16,13 @@ public class RuntimeMathTest {
   check(text.contains("language = en")&&text.contains("custom = 7"),"Config writer preserves unrelated entries");
   check(text.indexOf("xnr.renut_brightness_gamma")==text.lastIndexOf("xnr.renut_brightness_gamma"),"Owned config values cannot duplicate");
   check(text.contains("xnr.renut_brightness_gamma = 1.25"),"Chosen settings replace launcher defaults");
+  check(Performance.targetRefresh(1)==60,"Native 30 FPS uses a 60 Hz display target");
+  check(Performance.targetRefresh(2)==60,"2x frame generation targets 60 Hz");
+  check(Performance.targetRefresh(3)==90&&Performance.targetRefresh(4)==120,"3x and 4x match output rates");
+  check(Performance.modeScore(60,60)<Performance.modeScore(120,60),"Prefer lower matching refresh to save display power");
+  check(Performance.modeScore(120,60)<Performance.modeScore(90,60),"Fallback prefers an even cadence");
+  check(Performance.modeScore(59.94f,60)<Performance.modeScore(90,60),"Fractional 60 Hz modes remain valid");
+  check(Performance.modeScore(Float.NaN,60)==Float.MAX_VALUE,"Invalid display rates are rejected");
   System.out.println("PASS: "+checks+" display/configuration/performance assertions");
  }
 }

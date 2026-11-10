@@ -1,7 +1,7 @@
 name: R2 real activity startup check
 on:
   push:
-    paths: ['.github/workflows/r2-startup.yml']
+    paths: ['.github/workflows/r2-startup.yml', 'r2/tests/android/startup_smoke.py', 'r2/src/**/*.java', 'r2/customize.py', 'r2/verify_linkage.py']
   workflow_dispatch:
 permissions:
   contents: read
@@ -67,51 +67,9 @@ jobs:
           fi
           abis=$("$ANDROID_HOME/platform-tools/adb" shell getprop ro.product.cpu.abilist | tr -d '\r')
           echo "::notice title=Android test ABIs::$abis"
-      - name: Compare real R1 and R2 game-activity startup
-        timeout-minutes: 5
-        run: |
-          set -euo pipefail
-          adb="$ANDROID_HOME/platform-tools/adb"
-          "$adb" root
-          "$adb" wait-for-device
-          for version in R1 R2; do
-            if [ "$version" = R1 ]; then apk="$RUNNER_TEMP/r1-results/R1-control.apk"; else apk="$RUNNER_TEMP/r1-results/R2-ci-only.apk"; fi
-            "$adb" install --no-incremental -r "$apk"
-            "$adb" shell am force-stop com.naruto.storm3
-            "$adb" shell appops set com.naruto.storm3 MANAGE_EXTERNAL_STORAGE allow
-            "$adb" shell mkdir -p /data/data/com.naruto.storm3/shared_prefs /sdcard/Android/data/com.naruto.storm3/files/r2-empty-game
-            cat > "$RUNNER_TEMP/r1-tools/naruto.xml" <<'PREFS'
-          <?xml version='1.0' encoding='utf-8' standalone='yes' ?>
-          <map><boolean name="logging_enabled" value="true"/><boolean name="menu_stats" value="false"/><int name="menu_screen_hz" value="0"/><int name="framegen_playing" value="1"/></map>
-          PREFS
-            "$adb" push "$RUNNER_TEMP/r1-tools/naruto.xml" /data/data/com.naruto.storm3/shared_prefs/naruto.xml
-            "$adb" shell chmod 666 /data/data/com.naruto.storm3/shared_prefs/naruto.xml
-            "$adb" logcat -c
-            timeout --kill-after=5 35 "$adb" shell am start -W -n com.naruto.storm3/com.naruto.port.NarutoActivity --es gameDirectory /sdcard/Android/data/com.naruto.storm3/files/r2-empty-game > "$RUNNER_TEMP/r1-results/$version-start.txt" 2>&1 || true
-            sleep 5
-            "$adb" logcat -d -b all > "$RUNNER_TEMP/r1-results/$version-startup.log"
-            "$adb" shell am force-stop com.naruto.storm3
-          done
-          python3 - <<'CHECK'
-          from pathlib import Path
-          import os,re
-          root=Path(os.environ['RUNNER_TEMP'])/'r1-results'
-          failed=False
-          for version in ['R1','R2']:
-              text=(root/f'{version}-startup.log').read_text(errors='replace')
-              lines=text.splitlines();relevant=[]
-              for index,line in enumerate(lines):
-                  if 'AndroidRuntime' in line or 'FATAL EXCEPTION' in line:
-                      relevant.append(line)
-              relevant += [line for line in lines if 'com.naruto.storm3' in line or 'naruto' in line.lower() or 'SDL' in line][-30:]
-              relevant.insert(0,(root/f'{version}-start.txt').read_text(errors='replace'))
-              message='\n'.join(relevant)[-9000:]
-              for part in [message[i:i+3000] for i in range(0,len(message),3000)]:
-                  escaped=part.replace('%','%25').replace('\r','%0D').replace('\n','%0A')
-                  print(f'::notice title={version} real startup::'+escaped)
-              if version=='R2' and 'FATAL EXCEPTION' in text:failed=True
-          if failed:raise SystemExit('The real R2 activity crashed during startup.')
-          CHECK
+      - name: Compare real R1 and R2 activity startup and native menu calls
+        timeout-minutes: 6
+        run: python3 r2/tests/android/startup_smoke.py
       - name: Retain startup evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -120,4 +78,5 @@ jobs:
           path: |
             ${{ runner.temp }}/r1-results/*startup.log
             ${{ runner.temp }}/r1-results/*start.txt
+            ${{ runner.temp }}/r1-results/*menu*.xml
           if-no-files-found: ignore
