@@ -16,5 +16,6 @@ public final class GameLoop {
   return true;
  }
  public static void resume(NarutoActivity a){GameHooks.refreshPrefs(a);GameHooks.active=true;if(a.statsView==null)return;a.statsHandler.removeCallbacks(a.statsUpdater);if(GameHooks.prefs(a).getBoolean("menu_stats",true))a.statsHandler.post(a.statsUpdater);else a.statsView.setValues(null);a.statsHandler.removeCallbacks(a.prepareUpdater);if(!GameHooks.preparationDone&&a.preparePanel!=null)a.statsHandler.post(a.prepareUpdater);}
+ public static void destroy(NarutoActivity a){pause(a);a.statsHandler.removeCallbacksAndMessages(null);}
  public static void pause(NarutoActivity a){GameHooks.active=false;a.statsHandler.removeCallbacks(a.statsUpdater);a.statsHandler.removeCallbacks(a.prepareUpdater);}
 }

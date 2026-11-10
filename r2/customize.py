@@ -65,7 +65,7 @@ def customize(root):
  source=game.read_text().replace('.method private applyControllerMode()V','.method private r2OriginalControllerMode()V')
  source+='\n.method private applyControllerMode()V\n    .locals 0\n    invoke-direct {p0}, Lcom/naruto/port/NarutoActivity;->r2OriginalControllerMode()V\n    invoke-static {p0}, Lcom/naruto/r2/GameMenu;->applyTouch(Lcom/naruto/port/NarutoActivity;)V\n    return-void\n.end method\n'
  game.write_text(source)
- change(game,'.method public onDestroy()V',lambda b:start(b,call('GameLoop','pause(Lcom/naruto/port/NarutoActivity;)V')))
+ change(game,'.method public onDestroy()V',lambda b:start(b,call('GameLoop','destroy(Lcom/naruto/port/NarutoActivity;)V')))
  change(smali/'a/Y.smali','.method public final onTouch(Landroid/view/View;Landroid/view/MotionEvent;)Z',lambda b:'.method public final onTouch(Landroid/view/View;Landroid/view/MotionEvent;)Z\n    .locals 1\n    iget-object v0, p0, La/Y;->f:La/Z;\n    invoke-static {v0, p1, p2}, Lcom/naruto/r2/GameMenu;->touch(La/Z;Landroid/view/View;Landroid/view/MotionEvent;)Z\n    move-result v0\n    return v0\n.end method')
  change(smali/'a/L.smali','.method public final run()V',lambda b:start(b,'    iget v0, p0, La/L;->a:I\n    iget-object v1, p0, La/L;->b:Landroid/view/KeyEvent$Callback;\n    invoke-static {v0, v1}, Lcom/naruto/r2/GameLoop;->tick(ILandroid/view/KeyEvent$Callback;)Z\n    move-result v0\n    if-eqz v0, :r2_stock_tick\n    return-void\n    :r2_stock_tick'))
  # Retain minimal animations while visible, suspend every repeating launcher animator while hidden.
@@ -78,8 +78,11 @@ def customize(root):
  ambient=smali/'a/o.smali';source=ambient.read_text();needle='    invoke-virtual {p1}, Landroid/animation/ValueAnimator;->start()V'
  if source.count(needle)!=1:raise ValueError('Ambient animator changed')
  ambient.write_text(source.replace(needle,needle+'\n    invoke-static {p0, p1}, Lcom/naruto/r2/LauncherMotion;->registerView(Landroid/view/View;Landroid/animation/Animator;)V'))
- for name in ['F','m0','o']:
-  change(smali/('a/'+name+'.smali'),'.method public final onDraw(Landroid/graphics/Canvas;)V',lambda b:start(b,'    invoke-static/range {p0 .. p0}, Lcom/naruto/r2/LauncherMotion;->visible(Landroid/view/View;)Z\n    move-result v0\n    if-nez v0, :r2_draw_visible\n    return-void\n    :r2_draw_visible'))
+ for name in ['F','m0']:
+  path=smali/('a/'+name+'.smali');source=path.read_text();needle=('    invoke-virtual/range {p0 .. p0}, ' if name=='F' else '    invoke-virtual {p0}, ')+'Landroid/view/View;->postInvalidateOnAnimation()V'
+  if needle not in source:raise ValueError('Drawing loop changed: '+name)
+  path.write_text(source.replace(needle,'    invoke-static/range {p0 .. p0}, Lcom/naruto/r2/LauncherMotion;->schedule(Landroid/view/View;)V'))
+ with launcher.open('a') as out:out.write('\n.method public onWindowFocusChanged(Z)V\n    .locals 0\n    invoke-super {p0, p1}, Landroid/app/Activity;->onWindowFocusChanged(Z)V\n    if-eqz p1, :r2_launcher_blurred\n    invoke-static {p0}, Lcom/naruto/r2/LauncherMotion;->resume(Landroid/app/Activity;)V\n    return-void\n    :r2_launcher_blurred\n    invoke-static {p0}, Lcom/naruto/r2/LauncherMotion;->pause(Landroid/app/Activity;)V\n    return-void\n.end method\n')
  # Replace the legacy platform theme for all original and added dialogs/popups.
  (root/'res/values/styles.xml').write_text((ROOT/'assets/styles.xml').read_text())
  (root/'res/drawable').mkdir(exist_ok=True)

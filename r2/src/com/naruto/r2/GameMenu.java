@@ -39,8 +39,7 @@ public final class GameMenu {
   body.addView(ModernUi.action(host,"Brightness",null,()->{owner[0].dismiss();actions.brightness();}));
   body.addView(ModernUi.action(host,"Edit touch layout",null,()->{owner[0].dismiss();actions.edit();}));
   body.addView(ModernUi.action(host,"Hide menu button","Tap its corner to bring it back",()->{owner[0].dismiss();actions.hide();}));
-  body.addView(ModernUi.action(host,"Return to launcher",null,()->{owner[0].dismiss();actions.leave();}));
-  owner[0]=ModernUi.show(new AlertDialog.Builder(host).setTitle("Game options").setView(ModernUi.scroll(host,body)).setPositiveButton("Resume",null));return owner[0];
+  owner[0]=ModernUi.show(new AlertDialog.Builder(host).setTitle("Game options").setView(ModernUi.scroll(host,body)).setNeutralButton("Return to launcher",(d,w)->actions.leave()).setPositiveButton("Resume",null));return owner[0];
  }
  public static String screenName(int mode){return mode==2?"Crop to fill":mode==1?"Stretch":"Fit · original proportions";}
  private static void screen(NarutoActivity a){int selected=GameHooks.prefs(a).getInt("r2_screen",GameHooks.prefs(a).getInt("menu_screen_v3",0));ModernUi.show(new AlertDialog.Builder(a).setTitle("Display mode").setSingleChoiceItems(new String[]{"Fit · show the full image","Stretch · fill the display","Crop · fill with correct proportions"},Math.max(0,Math.min(2,selected)),(d,w)->{a.r2ApplyStretch(w==1);GameHooks.prefs(a).edit().putInt("r2_screen",w).apply();GameHooks.updateCrop(a);d.dismiss();}).setNegativeButton("Cancel",null));}

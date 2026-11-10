@@ -31,6 +31,10 @@ jobs:
           from pathlib import Path
           import re
           text=Path('results/android-instrumentation.txt').read_text()
+          if 'R2_STALL_STAGE=' in text:
+              at=text.index('R2_STALL_STAGE=')
+              trace=text[max(0,at-3000):at+200].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+              print('::notice title=R2 idle trace::'+trace)
           assert 'R2_ANDROID_RESULT=FAIL' not in text
           result=re.search(r'R2_ANDROID_RESULT=PASS assertions=\d+',text).group()
           print('::notice title=R2 Android result::'+result)
