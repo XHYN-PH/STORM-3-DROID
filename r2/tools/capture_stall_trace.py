@@ -14,7 +14,10 @@ def capture(adb, output, seconds):
     def context(phase):
         lines=[phase+' UTC: '+datetime.now(timezone.utc).isoformat()]
         for args in [('getprop','ro.product.model'),('getprop','ro.build.version.sdk'),('dumpsys','thermalservice'),('dumpsys','display')]:
-            result=subprocess.run([adb,'shell',*args],capture_output=True,text=True,timeout=15,check=False)
+            try:
+                result=subprocess.run([adb,'shell',*args],capture_output=True,text=True,timeout=15,check=False)
+            except subprocess.TimeoutExpired:
+                lines.append(' '.join(args)+'\nUnavailable: command timed out');continue
             text=result.stdout
             if args[0]=='dumpsys':
                 words=('thermal status','temperature{','mactive','mcommitted','refresh','modeid','supportedmodes','displaydeviceinfo')

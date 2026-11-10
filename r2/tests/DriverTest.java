@@ -39,7 +39,11 @@ public class DriverTest {
    byte[] elf=new byte[64];elf[0]=127;elf[1]='E';elf[2]='L';elf[3]='F';elf[4]=2;elf[5]=1;elf[6]=1;elf[16]=3;elf[18]=(byte)183;
    Path library=good.resolve("vulkan.radeon.so");Files.write(library,elf);
    check(DriverArchive.library(good.toFile(),"vulkan.radeon.so").isFile(),"ARM64 shared object accepted");
-   String first=DriverArchive.hash(library.toFile());elf[18]=62;Files.write(library,elf);
+   String first=DriverArchive.hash(library.toFile()),packageBefore=DriverArchive.packageHash(good.toFile());Files.write(good.resolve("NOTICE.txt"),"updated notice".getBytes("UTF-8"));
+   check(!packageBefore.equals(DriverArchive.packageHash(good.toFile()))&&first.equals(DriverArchive.hash(library.toFile())),"Changed notices receive a new package identity even with the same main library");
+   packageBefore=DriverArchive.packageHash(good.toFile());Files.write(good.resolve("dependency.so"),new byte[]{1,2,3});
+   check(!packageBefore.equals(DriverArchive.packageHash(good.toFile())),"Auxiliary driver dependencies participate in package identity");
+   elf[18]=62;Files.write(library,elf);
    rejects(()->DriverArchive.library(good.toFile(),"vulkan.radeon.so"),"x86 driver rejected");
    check(!first.equals(DriverArchive.hash(library.toFile())),"Content identity changes with the driver bytes");
    rejects(()->DriverArchive.library(good.toFile(),"../vulkan.radeon.so"),"Escaping libraryName rejected");

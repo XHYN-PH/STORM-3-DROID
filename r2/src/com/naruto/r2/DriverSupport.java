@@ -41,14 +41,14 @@ public final class DriverSupport {
     }
     public static a.k validate(File folder,int sdk,String report)throws IOException{
         JSONObject meta=metadata(folder);
-        if(meta.optInt("schemaVersion",1)!=1)throw new IOException("Unsupported driver metadata format.");
+        if(meta.has("schemaVersion")&&meta.optInt("schemaVersion",-1)!=1)throw new IOException("Unsupported driver metadata format.");
         String library=meta.optString("libraryName","");DriverArchive.library(folder,library);
         String label=meta.optString("name",folder.getName()),version=meta.optString("driverVersion","");
         String abi=meta.optString("abi","").toLowerCase(Locale.ROOT),api=meta.optString("api","").toLowerCase(Locale.ROOT);
         if(abi.contains("glibc")||(api.contains("opengl")&&!api.contains("vulkan")))throw new IOException("Choose an Android/Bionic Vulkan driver package.");
         if((label+" "+library).toLowerCase(Locale.ROOT).contains("wayland"))throw new IOException("Choose the standard Android driver ZIP, rather than its Wayland build.");
         int family=DriverPolicy.packageFamily(label,library,meta.optString("backend",""));
-        String issue=DriverPolicy.incompatibility(DriverPolicy.gpuFamily(report),report,family,label,version,sdk,meta.optInt("minApi",28));
+        String issue=DriverPolicy.incompatibility(DriverPolicy.gpuFamily(report),report,family,label,version,sdk,meta.has("minApi")?meta.optInt("minApi",-1):28);
         if(!issue.isEmpty())throw new IOException(issue);
         String description=meta.optString("description","");
         if(family==DriverPolicy.MALI||family==DriverPolicy.XCLIPSE)description+="\n\nExperimental "+DriverPolicy.name(family)+" driver import. STORM 3 gameplay compatibility is unverified; GPU, kernel and Vulkan features still matter. Applies at the next game launch.";
@@ -63,10 +63,10 @@ public final class DriverSupport {
             try(FileLock owned=lock){
                 stage=Files.createTempDirectory(base.toPath(),".import-").toFile();DriverArchive.extract(source,stage);
                 a.k driver=validate(stage,Build.VERSION.SDK_INT,gpu());
-                String hash=DriverArchive.hash(new File(stage,driver.e));
-                File installed=new File(base,"driver_"+hash.substring(0,20)+"_"+DriverArchive.hash(new File(stage,"meta.json")).substring(0,12));
+                String hash=DriverArchive.packageHash(stage);
+                File installed=new File(base,"driver_"+hash.substring(0,32));
                 if(installed.exists()){
-                    if(!hash.equals(DriverArchive.hash(DriverArchive.library(installed,driver.e))))throw new IOException("The existing copy is damaged. Remove it and import the ZIP again.");
+                    if(!hash.equals(DriverArchive.packageHash(installed)))throw new IOException("The existing copy is damaged. Remove it and import the ZIP again.");
                     validate(installed,Build.VERSION.SDK_INT,gpu());
                 }else if(!stage.renameTo(installed))throw new IOException("Could not install the driver.");
                 return validate(installed,Build.VERSION.SDK_INT,gpu());
