@@ -6,6 +6,10 @@ on:
         description: Passing R2 Android validation run
         required: true
         type: string
+      startup_evidence:
+        description: Inspect actual game-start hierarchy
+        default: false
+        type: boolean
       font:
         description: Font scale artifact
         default: '1.0'
@@ -15,6 +19,7 @@ permissions:
   contents: read
 jobs:
   previews:
+    if: ${{ !inputs.startup_evidence }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
@@ -67,3 +72,26 @@ jobs:
         run: python3 preview.py game-menu 1
       - name: game-menu preview part 2
         run: python3 preview.py game-menu 2
+  startup-evidence:
+    if: ${{ inputs.startup_evidence }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      R2_RUN_ID: ${{ inputs.run_id }}
+    steps:
+      - name: Read actual game hierarchy
+        run: |
+          gh run download "$R2_RUN_ID" --name R2-real-startup --dir results
+          python3 - <<'PYXML'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET,json
+          for path in Path('results').glob('*menu*.xml'):
+              root=ET.parse(path).getroot()
+              nodes=[{k:n.get(k) for k in ['class','text','content-desc','bounds','clickable']} for n in root.iter('node') if n.get('text') or n.get('content-desc') or n.get('class') in ['android.widget.ImageView','org.libsdl.app.SDLSurface']]
+              text=json.dumps(nodes,ensure_ascii=False)
+              for i in range(0,len(text),3000):
+                  part=text[i:i+3000].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+                  print('::notice title=Real game hierarchy::'+part)
+          PYXML
