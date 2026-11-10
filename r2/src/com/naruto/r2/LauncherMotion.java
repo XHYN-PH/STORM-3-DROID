@@ -14,6 +14,6 @@ public final class LauncherMotion {
  public static void schedule(View v){if(active&&v.isShown()&&v.getWindowVisibility()==View.VISIBLE)v.postInvalidateOnAnimation();}
  private static void invalidate(View v){v.invalidate();if(v instanceof ViewGroup){ViewGroup group=(ViewGroup)v;for(int i=0;i<group.getChildCount();i++)invalidate(group.getChildAt(i));}}
  public static void pause(Activity a){active=false;List<Animator> list=animations.get(a);if(list!=null)for(Animator animator:list)animator.pause();}
- public static void resume(Activity a){GameHooks.refreshPrefs(a);active=true;List<Animator> list=animations.get(a);if(list!=null)for(Animator animator:list)animator.resume();invalidate(a.getWindow().getDecorView());}
- public static void destroy(Activity a){List<Animator> list=animations.remove(a);if(list!=null)for(Animator animator:list)animator.cancel();}
+ public static void resume(Activity a){GameHooks.refreshPrefs(a);active=true;List<Animator> list=animations.get(a);if(list!=null)for(Animator animator:list)animator.resume();invalidate(a.getWindow().getDecorView());ExitFeedback.watch(a);}
+ public static void destroy(Activity a){ExitFeedback.destroy(a);List<Animator> list=animations.remove(a);if(list!=null)for(Animator animator:list)animator.cancel();}
 }

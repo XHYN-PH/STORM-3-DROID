@@ -50,5 +50,5 @@ public final class GameMenu {
  private static void brightness(NarutoActivity a){adjust(a,"Brightness",GameHooks.prefs(a).getFloat("r2_gamma",1),.5f,2,v->{try{if(NarutoActivity.r2ShadowSet("renut_brightness_gamma",Float.toString(v)))GameHooks.prefs(a).edit().putFloat("r2_gamma",v).apply();}catch(UnsatisfiedLinkError ignored){}});}
  public static void confirmExit(NarutoActivity a){confirmExit(a,()->exit(a));}
  public static AlertDialog confirmExit(Activity host,Runnable leave){return ModernUi.show(new AlertDialog.Builder(host).setTitle("Return to launcher?").setMessage("Wait for the game's save indicator to finish before leaving. Unsaved progress will be lost.").setNegativeButton("Keep playing",null).setPositiveButton("Return to launcher",(d,w)->leave.run()));}
- public static void exit(NarutoActivity a){if(a.isFinishing())return;neutral(a);GameLoop.pause(a);GameHooks.returnToLauncher=true;a.finish();}
+ public static void exit(NarutoActivity a){if(a.isFinishing())return;neutral(a);GameLoop.pause(a);GameHooks.returnToLauncher=true;ExitFeedback.begin(a);a.finish();}
 }

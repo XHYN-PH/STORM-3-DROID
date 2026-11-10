@@ -60,6 +60,10 @@ for version,file in [('R1','R1-control.apk'),('R2-broken','R2-broken-control.apk
             hierarchy=dump_menu('R2-native-loader.xml')
             messages=[node.get('text','') for node in hierarchy.iter('node')]
             assert any('missing default.xex' in text for text in messages),'The native loader did not reach the expected empty-fixture boundary.'
+            session=command('shell','cat',f'/data/data/{package}/files/r2-last-session.txt')
+            assert 'App: STORM 3 R2.3' in session and 'Last foreground Android display rate:' in session,'Real game activity did not capture the new session metadata.'
+            (result/'R2-session-details.txt').write_text(session)
+            notice('R2 session evidence','PASS: real game-activity session version and display snapshot recorded.')
             assert_alive();log=read_log(version)
         assert not re.search(r'AndroidRuntime: Process: com\.naruto\.storm3:game',log),'AndroidRuntime reported an uncaught game exception.'
         notice(version+' startup result','PASS: actual :game process alive, SDL native main reached'+(', native missing-game-file dialog reached without the Java startup crash' if version=='R2' else ''))

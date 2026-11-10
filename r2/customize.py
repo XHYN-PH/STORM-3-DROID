@@ -25,6 +25,19 @@ def customize(root):
  launcher=smali/'com/naruto/port/LauncherActivity.smali';game=smali/'com/naruto/port/NarutoActivity.smali';touch=smali/'a/f0.smali';controller=smali/'com/naruto/port/ControllerMapActivity.smali'
  change(launcher,'.method public final onCreate(Landroid/os/Bundle;)V',lambda b:returns(start(b,call('GameHooks','beforeLauncher(Landroid/app/Activity;)V')),call('LauncherUi','install(Lcom/naruto/port/LauncherActivity;)V')))
  change(launcher,'.method public final t()V',lambda b:returns(b,call('GameHooks','config(Landroid/app/Activity;)V')))
+ # Extend the existing Send log action and its strict provider whitelist.
+ source=launcher.read_text().replace('.method public final n(Z)V','.method public final r2OriginalSendLog(Z)V')
+ source+='\n.method public final n(Z)V\n    .locals 0\n    invoke-static {p0, p1}, Lcom/naruto/r2/SessionDetails;->share(Lcom/naruto/port/LauncherActivity;Z)V\n    return-void\n.end method\n'
+ needle='    const/4 v6, 0x6\n\n    if-ge v5, v6, :cond_1'
+ if source.count(needle)!=1:raise ValueError('Stock share attachment loop changed')
+ launcher.write_text(source.replace(needle,'    array-length v6, v3\n\n    if-ge v5, v6, :cond_1'))
+ provider=smali/'com/naruto/port/LogProvider.smali';source=provider.read_text()
+ needle='    filled-new-array/range {v0 .. v5}, [Ljava/lang/String;'
+ if source.count(needle)!=1:raise ValueError('Stock log whitelist changed')
+ source=source.replace('    .locals 6','    .locals 7',1).replace(needle,'    const-string v6, "session-details.txt"\n\n    filled-new-array/range {v0 .. v6}, [Ljava/lang/String;')
+ needle='    const/4 v4, 0x6\n\n    if-ge v3, v4, :cond_2'
+ if source.count(needle)!=1:raise ValueError('Stock provider attachment loop changed')
+ provider.write_text(source.replace(needle,'    array-length v4, v1\n\n    if-ge v3, v4, :cond_2'))
  change(launcher,'.method public final onActivityResult(IILandroid/content/Intent;)V',lambda b:start(b,'''    invoke-static/range {p0 .. p3}, Lcom/naruto/r2/LauncherUi;->activityResult(Lcom/naruto/port/LauncherActivity;IILandroid/content/Intent;)Z
 
     move-result v0
@@ -66,6 +79,7 @@ def customize(root):
   source+=f"\n.method public r2{method[0].upper()+method[1:]}({types})V\n    .locals 0\n    invoke-direct/range {{p0 .. p{len(types)}}}, Lcom/naruto/port/NarutoActivity;->{method}({types})V\n    return-void\n.end method\n"
  source+='\n.method public r2GameThread()Ljava/lang/Thread;\n    .locals 1\n    sget-object v0, Lorg/libsdl/app/SDLActivity;->mSDLThread:Ljava/lang/Thread;\n    return-object v0\n.end method\n.method public onPause()V\n    .locals 0\n    invoke-static {p0}, Lcom/naruto/r2/GameLoop;->pause(Lcom/naruto/port/NarutoActivity;)V\n    invoke-super {p0}, Lorg/libsdl/app/SDLActivity;->onPause()V\n    return-void\n.end method\n.method public onResume()V\n    .locals 0\n    invoke-super {p0}, Lorg/libsdl/app/SDLActivity;->onResume()V\n    invoke-static {p0}, Lcom/naruto/r2/GameLoop;->resume(Lcom/naruto/port/NarutoActivity;)V\n    return-void\n.end method\n'
  game.write_text(source)
+ with game.open('a') as out:out.write('\n.method public onWindowFocusChanged(Z)V\n    .locals 0\n    invoke-super {p0, p1}, Lorg/libsdl/app/SDLActivity;->onWindowFocusChanged(Z)V\n    invoke-static {p0, p1}, Lcom/naruto/r2/SessionDetails;->focus(Lcom/naruto/port/NarutoActivity;Z)V\n    return-void\n.end method\n')
  change(game,'.method private requestRefreshRate(II)V',lambda b:'.method private requestRefreshRate(II)V\n    .locals 0\n'+call('Performance','refresh(Lcom/naruto/port/NarutoActivity;II)V',2)+'\n    return-void\n.end method')
  change(game,'.method public onBackPressed()V',lambda b:'.method public onBackPressed()V\n    .locals 0\n'+call('GameMenu','back(Lcom/naruto/port/NarutoActivity;)V')+'\n    return-void\n.end method')
  # The original method reuses p0 for the emblem. Keep the Activity in a wrapper.
@@ -97,7 +111,7 @@ def customize(root):
  strings=root/'res/values/strings.xml';text=strings.read_text();text,n=re.subn(r'(<string name="app_name">)[^<]*(</string>)',r'\g<1>STORM 3\2',text);assert n==1;strings.write_text(text)
  image=root/'res/drawable/storm3_icon.png';image.parent.mkdir(exist_ok=True);shutil.copyfile(ROOT/'assets/storm3_icon.png',image)
  manifest=root/'AndroidManifest.xml';text=manifest.read_text().replace('android:icon="@mipmap/ic_storm3"','android:icon="@drawable/storm3_icon"').replace('android:roundIcon="@mipmap/ic_storm3"','android:roundIcon="@drawable/storm3_icon"');manifest.write_text(text)
- yaml=root/'apktool.yml';text=yaml.read_text().replace('  versionCode: 47','  versionCode: 50').replace('  versionName: R1','  versionName: R2.2');yaml.write_text(text)
+ yaml=root/'apktool.yml';text=yaml.read_text().replace('  versionCode: 47','  versionCode: 51').replace('  versionName: R1','  versionName: R2.3');yaml.write_text(text)
  print('PASS: refined R2 menus, performance/lifecycle hooks, stock controls, app name/icon and version applied.')
 if __name__=='__main__':
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('decoded',type=Path);customize(p.parse_args().decoded)

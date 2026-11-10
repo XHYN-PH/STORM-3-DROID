@@ -23,7 +23,7 @@ public final class GameHooks {
         }catch(IOException|OverlappingFileLockException e){try{if(gameLockFile!=null)gameLockFile.close();}catch(IOException ignored){}gameLockFile=null;gameLock=null;android.widget.Toast.makeText(a,"Save management is in progress. Try starting the game again when it finishes.",android.widget.Toast.LENGTH_LONG).show();a.finish();}
     }
     public static void gameStop(Activity a){
-        active=false;
+        active=false;SessionDetails.stop(a);
         Thread engine=a instanceof com.naruto.port.NarutoActivity?((com.naruto.port.NarutoActivity)a).r2GameThread():null;
         if(engine!=null&&engine.isAlive()){
             // SDL's normal shutdown only waits one second. Keep saves locked if it takes longer.
@@ -39,7 +39,7 @@ public final class GameHooks {
     public static void refreshPrefs(Activity a){a.getSharedPreferences("naruto",4).getAll();}
     public static void gameReady(final Activity a){
         if(a.isFinishing())return;
-        if(a instanceof com.naruto.port.NarutoActivity)GameMenu.applyTouch((com.naruto.port.NarutoActivity)a);
+        if(a instanceof com.naruto.port.NarutoActivity){GameMenu.applyTouch((com.naruto.port.NarutoActivity)a);SessionDetails.start((com.naruto.port.NarutoActivity)a);}
         final SharedPreferences p=prefs(a);
         final View surface=findSurface(a.getWindow().getDecorView());
         if(surface!=null)surface.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->applyCrop(surface,p.getInt("r2_screen",0),p.getInt("r2_crop",100)));

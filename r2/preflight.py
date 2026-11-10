@@ -13,6 +13,8 @@ run(sys.executable,ROOT/'tests/test_linkage.py')
 # Each fixture is new and outside any real app save tree.
 run('java','--module','jdk.compiler/com.sun.tools.javac.Main','-d',work/'save-tests',ROOT/'src/com/naruto/r2/SaveFiles.java',ROOT/'tests/SaveFilesTest.java')
 run('java','-cp',work/'save-tests','SaveFilesTest')
+run('java','--module','jdk.compiler/com.sun.tools.javac.Main','-d',work/'session-tests',ROOT/'src/com/naruto/r2/SessionFiles.java',ROOT/'tests/SessionFilesTest.java')
+run('java','-cp',work/'session-tests','SessionFilesTest')
 run(sys.executable,ROOT/'compile_runtime.py','--android-jar',a.android_jar,'--build-tools',a.build_tools,'--upstream',a.upstream,'--apktool',a.apktool)
 run('java','--module','jdk.compiler/com.sun.tools.javac.Main','-cp',str(work/'runtime/classes')+':'+str(a.android_jar),'-d',work/'runtime-tests',ROOT/'tests/RuntimeMathTest.java')
 run('java','-cp',str(work/'runtime-tests')+':'+str(work/'runtime/classes')+':'+str(a.android_jar),'RuntimeMathTest')
@@ -28,7 +30,7 @@ for relative,signature,needle in [
  before_hook=body.split(needle,1)[0]
  if re.search(r'^    (?:iget[^ ]*|move-result[^ ]*|const[^ ]*) p[01](?:,|$)',before_hook,re.M):raise AssertionError('Hook uses a clobbered stock parameter: '+relative)
 run(sys.executable,ROOT/'verify_linkage.py',decoded)
-run(sys.executable,ROOT.parent/'r1/verify_sources.py','--original',a.upstream,'--decoded',decoded,'--version-name','R2.2','--version-code','50')
+run(sys.executable,ROOT.parent/'r1/verify_sources.py','--original',a.upstream,'--decoded',decoded,'--version-name','R2.3','--version-code','51')
 # No excluded feature should be exposed under another label.
 code='\n'.join(f.read_text() for f in (ROOT/'src').rglob('*.java'))
 for unsupported in ['shader_prewarm','controller_profile','layout_profile','settings_backup','Export diagnostics','Performance history','class RightInput','class Haptics','class ControllerUi','class FrameGraph','class ControllerInput']:

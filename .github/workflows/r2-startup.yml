@@ -85,4 +85,5 @@ jobs:
             ${{ runner.temp }}/r1-results/*startup.log
             ${{ runner.temp }}/r1-results/*start.txt
             ${{ runner.temp }}/r1-results/*.xml
+            ${{ runner.temp }}/r1-results/*session-details.txt
           if-no-files-found: ignore

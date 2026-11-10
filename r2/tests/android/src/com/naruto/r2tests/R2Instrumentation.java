@@ -133,6 +133,7 @@ public final class R2Instrumentation extends Instrumentation {
         check(Math.abs(((Float)math.getMethod("cropScale",float.class,float.class,int.class).invoke(null,2400f,1080f,100))-1.25f)<.001f,"Proportional crop uses equal scale for both dimensions");
         testModernMenu(context,loader);
         testShutdownAndLookup(context,loader);
+        testSessionDetailsAndClosing(context,loader);
         Class<?> game=Class.forName("com.naruto.port.NarutoActivity",true,loader);
         for(String bridge:new String[]{"r2ShaderPrepare","r2StatsValues","r2SetTouch","r2SetShowStats","r2ShadowSet"}){boolean exposed=false;for(Method method:game.getDeclaredMethods())if(method.getName().equals(bridge))exposed=java.lang.reflect.Modifier.isPublic(method.getModifiers())&&java.lang.reflect.Modifier.isStatic(method.getModifiers());check(exposed,"Native bridge is accessible to runtime helpers: "+bridge);}
 
@@ -258,6 +259,57 @@ public final class R2Instrumentation extends Instrumentation {
             runOnMainSync(()->{if(frame[0]!=null&&frame[0].getParent() instanceof ViewGroup)((ViewGroup)frame[0].getParent()).removeView(frame[0]);});
         }
     }
+    private void testSessionDetailsAndClosing(Context context,ClassLoader loader)throws Exception {
+        Class<?> details=Class.forName("com.naruto.r2.SessionDetails",true,loader),exit=Class.forName("com.naruto.r2.ExitFeedback",true,loader);
+        File external=context.getExternalFilesDir(null),privateFile=new File(context.getFilesDir(),"r2-last-session.txt"),log=new File(external,"naruto.log"),gpu=new File(external,"gpu_info.txt"),shared=new File(external,"session-details.txt");
+        File[] files={privateFile,log,gpu,shared};byte[][] previous=new byte[files.length][];
+        for(int i=0;i<files.length;i++)if(files[i].isFile())previous[i]=java.nio.file.Files.readAllBytes(files[i].toPath());
+        SharedPreferences prefs=context.getSharedPreferences("naruto",0);boolean hadDirectory=prefs.contains("r23_private_test"),hadToken=prefs.contains("r23_token_test");String oldDirectory=prefs.getString("r23_private_test",null),oldToken=prefs.getString("r23_token_test",null);
+        final java.util.concurrent.atomic.AtomicReference<Intent> captured=new java.util.concurrent.atomic.AtomicReference<>();
+        ActivityMonitor monitor=new ActivityMonitor(){@Override public ActivityResult onStartActivity(Intent intent){if(Intent.ACTION_CHOOSER.equals(intent.getAction())){captured.set(intent);return new ActivityResult(Activity.RESULT_CANCELED,null);}return null;}};
+        try {
+            long now=System.currentTimeMillis();String session="Session started epoch ms: "+(now-1000)+"\nSnapshot epoch ms: "+now+"\nLast foreground Android display rate: 60.00 Hz\nPhase: paused\nApp: STORM 3 R2.3\n";
+            java.nio.file.Files.write(privateFile.toPath(),session.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            java.nio.file.Files.write(log.toPath(),"0.1 Render resolution 1600x900 (1.25x)\n1.0 AMD optical FG: 2x (asked 2x, screen 121 Hz)\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            java.nio.file.Files.write(gpu.toPath(),"GPU: Turnip Adreno (TM) 750\nvendor 5143, driver test, Vulkan 1.4\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            prefs.edit().putString("r23_private_test","PRIVATE_GAME_PATH_DO_NOT_SHARE").putString("r23_token_test","PRIVATE_TOKEN_DO_NOT_SHARE").commit();
+            Method selected=details.getDeclaredMethod("selected",Context.class);selected.setAccessible(true);String current=(String)selected.invoke(null,launcher);
+            String report=(String)details.getMethod("prepare",Context.class,String.class).invoke(null,context,current);
+            check(report.contains("App: STORM 3 R2.3")&&report.contains("Refresh selected:")&&report.contains("Frame generation selected:"),"Stock log details include app version and selected graphics settings");
+            check(report.contains("60.00 Hz")&&report.contains("2x / 2x / 121 Hz")&&report.contains("1600x900"),"Foreground display observations and final engine reports remain separately labelled");
+            check(!report.contains("PRIVATE_GAME_PATH_DO_NOT_SHARE")&&!report.contains("PRIVATE_TOKEN_DO_NOT_SHARE"),"Log details never dump arbitrary preferences or game paths");
+            android.net.Uri uri=android.net.Uri.parse("content://"+context.getPackageName()+".logs/session-details.txt");
+            try(java.io.InputStream stream=context.getContentResolver().openInputStream(uri)){check(stream!=null&&stream.read()=='S',"Original LogProvider can share the new metadata attachment");}
+            try{context.getContentResolver().openInputStream(android.net.Uri.parse("content://"+context.getPackageName()+".logs/r2-last-session.txt"));throw new AssertionError("Private metadata exposed");}catch(java.io.FileNotFoundException expected){check(true,"Provider whitelist still rejects private files");}
+            log.setLastModified(now-60000);report=(String)details.getMethod("prepare",Context.class,String.class).invoke(null,context,current);
+            check(report.contains("Not established")&&!report.contains("Engine render resolution:"),"Old renderer logs are not presented as observations from the current session");
+            log.setLastModified(System.currentTimeMillis());addMonitor(monitor);
+            runOnMainSync(()->{try{launcher.getClass().getMethod("n",boolean.class).invoke(launcher,false);}catch(Exception e){throw new RuntimeException(e);}});
+            long deadline=SystemClock.uptimeMillis()+5000;while(captured.get()==null&&SystemClock.uptimeMillis()<deadline)SystemClock.sleep(20);
+            check(captured.get()!=null,"Original Send log still opens its normal share chooser");
+            Intent payload=(Intent)captured.get().getParcelableExtra(Intent.EXTRA_INTENT);java.util.ArrayList<android.net.Uri> attachments=payload.getParcelableArrayListExtra(Intent.EXTRA_STREAM);boolean foundNative=false,foundDetails=false;
+            for(android.net.Uri attachment:attachments){foundNative|="naruto.log".equals(attachment.getLastPathSegment());foundDetails|="session-details.txt".equals(attachment.getLastPathSegment());}
+            check(foundNative&&foundDetails&&(payload.getFlags()&Intent.FLAG_GRANT_READ_URI_PERMISSION)!=0,"The existing share retains native logs and adds readable session details");
+        } finally {
+            removeMonitor(monitor);SharedPreferences.Editor restore=prefs.edit();if(hadDirectory)restore.putString("r23_private_test",oldDirectory);else restore.remove("r23_private_test");if(hadToken)restore.putString("r23_token_test",oldToken);else restore.remove("r23_token_test");restore.commit();
+            for(int i=0;i<files.length;i++){if(previous[i]==null)java.nio.file.Files.deleteIfExists(files[i].toPath());else java.nio.file.Files.write(files[i].toPath(),previous[i]);}
+        }
+        File marker=new File(context.getFilesDir(),"r2-exit.pending"),lockFile=new File(context.getFilesDir(),"r2-game.lock");
+        try(java.io.RandomAccessFile file=new java.io.RandomAccessFile(lockFile,"rw")) {
+            java.nio.channels.FileLock lock=file.getChannel().lock();
+            try {
+                java.nio.file.Files.write(marker.toPath(),"closing\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                runOnMainSync(()->{try{exit.getMethod("watch",Activity.class).invoke(null,launcher);}catch(Exception e){throw new RuntimeException(e);}});waitForIdleSync();
+                check(!getUiAutomation().getRootInActiveWindow().findAccessibilityNodeInfosByText("Closing game").isEmpty(),"Closing feedback uses the launcher's existing dialog style");
+                SystemClock.sleep(200);check(lock.isValid()&&marker.exists(),"Closing feedback waits without releasing the game/save lock");
+                runOnMainSync(()->{try{exit.getMethod("destroy",Activity.class).invoke(null,launcher);}catch(Exception e){throw new RuntimeException(e);}});waitForIdleSync();
+                check(marker.exists()&&lock.isValid(),"Activity cleanup cancels only its watcher, preserving shutdown state and saves");
+                runOnMainSync(()->{try{exit.getMethod("watch",Activity.class).invoke(null,launcher);}catch(Exception e){throw new RuntimeException(e);}});lock.release();
+                long deadline=SystemClock.uptimeMillis()+5000;while(marker.exists()&&SystemClock.uptimeMillis()<deadline)SystemClock.sleep(20);waitForIdleSync();
+                check(!marker.exists()&&getUiAutomation().getRootInActiveWindow().findAccessibilityNodeInfosByText("Closing game").isEmpty(),"Reopened closing feedback clears only after the owner releases its lock");
+            } finally {if(lock.isValid())lock.release();runOnMainSync(()->{try{exit.getMethod("destroy",Activity.class).invoke(null,launcher);}catch(Exception e){throw new RuntimeException(e);}});marker.delete();}
+        }
+    }
     @Override public void onStart() {
         Thread watchdog=new Thread(()->{try{Thread.sleep(120000);}catch(InterruptedException done){return;}if(completed)return;StringBuilder trace=new StringBuilder();for(java.util.Map.Entry<Thread,StackTraceElement[]> entry:Thread.getAllStackTraces().entrySet())if(entry.getKey().getName().equals("main")||entry.getKey().getName().contains("Instr")){trace.append(entry.getKey().getName()).append('\n');int n=0;for(StackTraceElement frame:entry.getValue()){trace.append(frame).append('\n');if(++n==12)break;}}Bundle status=new Bundle();status.putString("stream",trace+"R2_STALL_STAGE="+lastProgress+"\n");sendStatus(1,status);},"R2-watchdog");watchdog.setDaemon(true);watchdog.start();
         Bundle result=new Bundle(); Context context=getTargetContext();
@@ -265,7 +317,7 @@ public final class R2Instrumentation extends Instrumentation {
         boolean originalLogging=prefs.getBoolean("logging_enabled",false);
         boolean originalPt=prefs.getBoolean("menu_ptbr",false);
         try {
-            check("R2.2".equals(context.getPackageManager().getPackageInfo(context.getPackageName(),0).versionName),"Installed version is R2.2");
+            check("R2.3".equals(context.getPackageManager().getPackageInfo(context.getPackageName(),0).versionName),"Installed version is R2.3");
             check(!originalLogging,"Logging defaults to off on a fresh install");
             ClassLoader loader=context.getClassLoader();
             Class<?> control=Class.forName("com.naruto.port.LoggingControl",true,loader);
