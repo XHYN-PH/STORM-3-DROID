@@ -192,6 +192,7 @@ public final class R2Instrumentation extends Instrumentation {
             final List<View> views=new ArrayList<>();
             runOnMainSync(new Runnable(){public void run(){collect(launcher.getWindow().getDecorView(),views);}});
             check(hasText(views,"Logging"),"English Logging control is present");
+            View stockLog=named(views,"Send log");check(stockLog!=null&&stockLog.getVisibility()==View.VISIBLE&&stockLog.hasOnClickListeners(),"Original Send log action remains visible and connected");
             check(hasText(views,"Modified and Translated by XHYN_PH"),"YouTube footer has the requested text");
             check(!hasText(views,"PT-BR")&&!hasText(views,"Portuguese text"),"PT-BR option is absent");
             verifyR2(context,loader,views);

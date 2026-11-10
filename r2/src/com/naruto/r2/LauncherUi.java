@@ -22,11 +22,9 @@ public final class LauncherUi {
             while(v.getParent() instanceof View){View parent=(View)v.getParent();if((parent instanceof ScrollView||parent.getClass().getName().equals("a.i"))&&v instanceof LinearLayout){root=(LinearLayout)v;break;}v=parent;}
         }
         if(root==null)throw new IllegalStateException("Stock settings container was not found.");
-        hideLogExport(a.getWindow().getDecorView());
         add(a,root,a.q("More options",buttons(a,new String[]{"Display","Performance","Saves","Tools"},new Runnable[]{()->display(a),()->performance(a),()->saves(a),()->tools(a)})));
 
     }
-    private static void hideLogExport(View view){if(view instanceof TextView&&"Send log".contentEquals(((TextView)view).getText())){view.setVisibility(View.GONE);view.setOnClickListener(null);view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);}if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)hideLogExport(group.getChildAt(i));}}
     private static void display(LauncherActivity a){LinearLayout body=dialogBody(a);
         body.addView(ModernUi.text(a,"Graphics changes apply the next time the game starts.",12,ModernUi.MUTED));
         body.addView(dialogToggle(a,"Opening video","Show the launcher video","r2_video",true));
