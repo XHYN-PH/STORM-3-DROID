@@ -2,7 +2,7 @@
 
 ## Android runtime
 
-[Final Android validation](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42738642598) passed on source commit `f2f9c58f26686ef8bb1e826d3a676bf6db18c905`, with **62 assertions at each of 100% and 130% font scale**, plus the six Java/SDL logcat On/Off marker checks in each run.
+[Final Android validation](https://github.com/XHYN-PH/STORM-3-DROID/actions/runs/42738642598) passed with **62 assertions at each of 100% and 130% font scale**, plus the six Java/SDL logcat On/Off marker checks in each run. The validated runtime tree is recorded at `d99229df7f0996cd8e3446ea5f1f975c7403b466` and matches the CI revision.
 
 Coverage includes launcher/settings installation, app name and circular icon, readable Display dialog actions at both text sizes, removed runtime classes, expanded game-menu controls and action dispatch, exit confirmation/cancellation, preset persistence, polling cancellation, save-lock ordering, joystick lookup/removal, restored mapping selection/cancellation, native library/logging-hook loading and typed game-method verification. Android save fixtures verify read-only export, 100% protections, staged restore and exported ZIP compatibility with the unchanged stock importer.
 
