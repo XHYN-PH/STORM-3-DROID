@@ -1,6 +1,8 @@
-# STORM 3 — R2 customization
+# STORM 3 — R2.1 customization
 
 Modified and Translated by **XHYN_PH**.
+
+R2.1 fixes the game-start crash caused by inaccessible native methods. The original **Send log** link is restored; the added diagnostics exporter stays removed. Private engine methods are called through public bridges inside the activity, and real APK member access is checked before assembly.
 
 R2 keeps the launcher layout and stock controller mapping screen, with a shared dark Material theme, rounded dialogs and gold accents. Added settings stay in one compact **More options** card.
 
@@ -48,7 +50,7 @@ python3 r1/build_r1.py --r2 \
   --build-tools /path/to/build-tools/35.0.0 \
   --keystore /private/path/release.p12 \
   --password-file /private/path/keystore.pass \
-  --output /path/to/STORM-3-R2-arm64.apk
+  --output /path/to/STORM-3-R2.1-arm64.apk
 ```
 
 `compile_runtime.py` compiles the added Java classes using signature-only stubs for upstream classes. Those stubs are excluded from the DEX. Apktool disassembles the runtime and `customize.py` applies checked hooks to the translated base. All engine executable sections, bundled data and notices remain protected by source verification. R1 builds keep their original defaults unless `--r2` is explicitly supplied.
