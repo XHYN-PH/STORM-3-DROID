@@ -23,6 +23,10 @@ public class RuntimeMathTest {
   check(Performance.modeScore(120,60)<Performance.modeScore(90,60),"Fallback prefers an even cadence");
   check(Performance.modeScore(59.94f,60)<Performance.modeScore(90,60),"Fractional 60 Hz modes remain valid");
   check(Performance.modeScore(Float.NaN,60)==Float.MAX_VALUE,"Invalid display rates are rejected");
+  check(Performance.recoveryAllowed(true,true,false,0),"Foreground gameplay can recover its selected display mode");
+  check(!Performance.recoveryAllowed(false,true,false,0)&&!Performance.recoveryAllowed(true,false,false,0),"Background or unfocused windows cannot force a display change");
+  check(!Performance.recoveryAllowed(true,true,true,0),"Closing activities cannot request a display change");
+  check(!Performance.recoveryAllowed(true,true,false,2),"Display recovery has a bounded retry budget");
   System.out.println("PASS: "+checks+" display/configuration/performance assertions");
  }
 }

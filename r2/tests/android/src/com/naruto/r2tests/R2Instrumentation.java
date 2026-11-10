@@ -199,6 +199,7 @@ public final class R2Instrumentation extends Instrumentation {
         android.content.SharedPreferences prefs=context.getSharedPreferences("naruto",0); prefs.edit().remove("r2_stats_scale").remove("stats_collapsed").commit();
         try {
             runOnMainSync(()->{try{
+                Class.forName("com.naruto.r2.LauncherMotion",true,loader).getMethod("pause",Activity.class).invoke(null,launcher);
                 frame[0]=new android.widget.FrameLayout(launcher);frame[0].setBackgroundColor(android.graphics.Color.BLACK);
                 launcher.addContentView(frame[0],new ViewGroup.LayoutParams(-1,-1));
                 touchView[0]=(View)touchClass.getConstructor(Activity.class,listenerClass).newInstance(launcher,listener);
@@ -218,6 +219,18 @@ public final class R2Instrumentation extends Instrumentation {
             int recorded=recordings.getInt(state),hit=hits.getInt(state);
             runOnMainSync(()->touchView[0].invalidate());waitForIdleSync();SystemClock.sleep(100);
             check(recordings.getInt(state)==recorded&&hits.getInt(state)>hit,"Unchanged buttons reuse recorded artwork without rebuilding gradients");
+            Object stick=touchClass.getField("w").get(touchView[0]);Class<?> stickType=stick.getClass();int oldPointer=stickType.getField("a").getInt(stick);float[] oldStick=new float[7];String[] stickFields={"b","c","d","e","f","g","h"};for(int i=0;i<7;i++)oldStick[i]=stickType.getField(stickFields[i]).getFloat(stick);
+            try {
+                for(int direction:new int[]{1,-1}) {
+                    runOnMainSync(()->{try{float x=touchClass.getField("y").getFloat(touchView[0]),y=touchClass.getField("z").getFloat(touchView[0]),r=touchClass.getField("A").getFloat(touchView[0]);stickType.getField("a").setInt(stick,42);stickType.getField("b").setFloat(stick,x);stickType.getField("c").setFloat(stick,y);stickType.getField("d").setFloat(stick,x+direction*r*.65f);stickType.getField("e").setFloat(stick,y+r*.3f);enabled.setBoolean(state,false);touchView[0].invalidate();}catch(Throwable e){error[0]=e;}});
+                    android.graphics.Bitmap stockStick=region(touchView[0]);
+                    runOnMainSync(()->{try{enabled.setBoolean(state,true);touchView[0].invalidate();}catch(Throwable e){error[0]=e;}});android.graphics.Bitmap cachedStick=region(touchView[0]);
+                    check(samePixels(stockStick,cachedStick),"Cached left-stick artwork matches the stock moving control, direction "+direction);stockStick.recycle();cachedStick.recycle();
+                }
+                int stickRecords=state.getClass().getField("stickRecordings").getInt(state);
+                runOnMainSync(()->{try{stickType.getField("d").setFloat(stick,stickType.getField("b").getFloat(stick));touchView[0].invalidate();}catch(Throwable e){error[0]=e;}});waitForIdleSync();SystemClock.sleep(100);
+                check(state.getClass().getField("stickRecordings").getInt(state)==stickRecords,"Moving the knob reuses stick shapes and gradients");
+            }finally{runOnMainSync(()->{try{stickType.getField("a").setInt(stick,oldPointer);for(int i=0;i<7;i++)stickType.getField(stickFields[i]).setFloat(stick,oldStick[i]);touchView[0].invalidate();}catch(Throwable e){error[0]=e;}});}
             runOnMainSync(()->{try{touchClass.getField("D").setInt(touchView[0],0);touchView[0].invalidate();}catch(Throwable e){error[0]=e;}});
             android.graphics.Bitmap gameplay=region(touchView[0]);
             runOnMainSync(()->{try{touchClass.getMethod("setEditing",boolean.class).invoke(touchView[0],true);}catch(Throwable e){error[0]=e;}});
@@ -247,6 +260,16 @@ public final class R2Instrumentation extends Instrumentation {
                 float d=context.getResources().getDisplayMetrics().density;long t=SystemClock.uptimeMillis();
                 for(int action:new int[]{MotionEvent.ACTION_DOWN,MotionEvent.ACTION_UP}){MotionEvent e=MotionEvent.obtain(t,t+10,action,statsView[0].getWidth()-16*d,14*d,0);statsView[0].onTouchEvent(e);e.recycle();}
                 check(stats.getField("i").getBoolean(statsView[0]),"Stock collapse gesture still works on the resized panel");
+            }catch(Throwable e){error[0]=e;}});if(error[0]!=null)throw new RuntimeException(error[0]);
+            waitForIdleSync();Object statsState=stats.getField("r2StatsState").get(statsView[0]);Field samples=statsState.getClass().getField("memorySamples"),redraws=statsState.getClass().getField("redraws");int beforeSamples=samples.getInt(statsState),beforeRedraws=redraws.getInt(statsState);
+            runOnMainSync(()->{try{stats.getMethod("setValues",float[].class).invoke(statsView[0],(Object)new float[]{30,90,3000,80,900,2,60});}catch(Throwable e){error[0]=e;}});SystemClock.sleep(200);waitForIdleSync();
+            check(samples.getInt(statsState)==beforeSamples&&redraws.getInt(statsState)==beforeRedraws,"Unchanged collapsed FPS skips memory sampling and panel redraws");
+            runOnMainSync(()->{try{long t=SystemClock.uptimeMillis();for(int action:new int[]{MotionEvent.ACTION_DOWN,MotionEvent.ACTION_UP}){MotionEvent e=MotionEvent.obtain(t,t+10,action,10,10,0);statsView[0].onTouchEvent(e);e.recycle();}}catch(Throwable e){error[0]=e;}});
+            until=SystemClock.uptimeMillis()+5000;while(samples.getInt(statsState)==beforeSamples&&SystemClock.uptimeMillis()<until)SystemClock.sleep(20);waitForIdleSync();
+            check(!stats.getField("i").getBoolean(statsView[0])&&samples.getInt(statsState)>beforeSamples,"Expanding the panel resumes full statistics without waiting for a new native sample");
+            runOnMainSync(()->{try{prefs.edit().putFloat("r2_stats_scale",.7f).apply();statsHelper.getMethod("resize",stats).invoke(null,statsView[0]);statsView[0].setX(16);statsView[0].setY(16);}catch(Throwable e){error[0]=e;}});
+            screenshot(context,"statistics");
+            runOnMainSync(()->{try{
                 stats.getMethod("setValues",float[].class).invoke(statsView[0],(Object)new float[]{30,20,2000,40,600});
                 stats.getMethod("setValues",float[].class).invoke(statsView[0],(Object)null);
             }catch(Throwable e){error[0]=e;}});if(error[0]!=null)throw new RuntimeException(error[0]);
@@ -301,6 +324,7 @@ public final class R2Instrumentation extends Instrumentation {
                 java.nio.file.Files.write(marker.toPath(),"closing\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
                 runOnMainSync(()->{try{exit.getMethod("watch",Activity.class).invoke(null,launcher);}catch(Exception e){throw new RuntimeException(e);}});waitForIdleSync();
                 check(!getUiAutomation().getRootInActiveWindow().findAccessibilityNodeInfosByText("Closing game").isEmpty(),"Closing feedback uses the launcher's existing dialog style");
+                screenshot(context,"closing");
                 SystemClock.sleep(200);check(lock.isValid()&&marker.exists(),"Closing feedback waits without releasing the game/save lock");
                 runOnMainSync(()->{try{exit.getMethod("destroy",Activity.class).invoke(null,launcher);}catch(Exception e){throw new RuntimeException(e);}});waitForIdleSync();
                 check(marker.exists()&&lock.isValid(),"Activity cleanup cancels only its watcher, preserving shutdown state and saves");

@@ -15,6 +15,8 @@ run('java','--module','jdk.compiler/com.sun.tools.javac.Main','-d',work/'save-te
 run('java','-cp',work/'save-tests','SaveFilesTest')
 run('java','--module','jdk.compiler/com.sun.tools.javac.Main','-d',work/'session-tests',ROOT/'src/com/naruto/r2/SessionFiles.java',ROOT/'tests/SessionFilesTest.java')
 run('java','-cp',work/'session-tests','SessionFilesTest')
+run('java','--module','jdk.compiler/com.sun.tools.javac.Main','-d',work/'fps-tests',ROOT/'src/com/naruto/r2/FpsText.java',ROOT/'tests/FpsTextTest.java')
+run('java','-cp',work/'fps-tests','FpsTextTest')
 run(sys.executable,ROOT/'compile_runtime.py','--android-jar',a.android_jar,'--build-tools',a.build_tools,'--upstream',a.upstream,'--apktool',a.apktool)
 run('java','--module','jdk.compiler/com.sun.tools.javac.Main','-cp',str(work/'runtime/classes')+':'+str(a.android_jar),'-d',work/'runtime-tests',ROOT/'tests/RuntimeMathTest.java')
 run('java','-cp',str(work/'runtime-tests')+':'+str(work/'runtime/classes')+':'+str(a.android_jar),'RuntimeMathTest')

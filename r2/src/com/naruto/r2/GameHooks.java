@@ -49,7 +49,7 @@ public final class GameHooks {
     public static void updateCrop(Activity a){View v=findSurface(a.getWindow().getDecorView());if(v!=null)applyCrop(v,prefs(a).getInt("r2_screen",0),prefs(a).getInt("r2_crop",100));}
     public static void stockScreen(Activity a,boolean stretch){prefs(a).edit().putInt("r2_screen",stretch?1:0).apply();View v=findSurface(a.getWindow().getDecorView());if(v!=null)applyCrop(v,stretch?1:0,100);}
     public static int dp(Context c,float v){return Math.round(c.getResources().getDisplayMetrics().density*v);}
-    private static View findSurface(View v){if(v instanceof SurfaceView)return v;if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++){View found=findSurface(g.getChildAt(i));if(found!=null)return found;}}return null;}
+    static View findSurface(View v){if(v instanceof SurfaceView)return v;if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int i=0;i<g.getChildCount();i++){View found=findSurface(g.getChildAt(i));if(found!=null)return found;}}return null;}
     public static float cropScale(float w,float h,int amount){if(w<=0||h<=0)return 1;float ratio=w/h,target=16f/9f,fill=Math.max(ratio/target,target/ratio);return 1+(fill-1)*Math.max(0,Math.min(100,amount))/100f;}
     private static void applyCrop(View v,int mode,int amount){float scale=mode==2?cropScale(v.getWidth(),v.getHeight(),amount):1;v.setPivotX(v.getWidth()/2f);v.setPivotY(v.getHeight()/2f);v.setScaleX(scale);v.setScaleY(scale);}
     public static void config(Activity a){

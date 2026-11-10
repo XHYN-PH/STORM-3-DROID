@@ -36,12 +36,23 @@ public final class StatsOverlay {
         long generation;
         boolean busy;
         Labels labels;
+        float[] latest;
+        public int memorySamples,redraws;
         final float[] hsv = new float[3];
     }
     private static final class Labels {
-        String fps, heading, cpu, gpu, ram;
-        final String[] percentages = new String[3];
-        final float[] usage = new float[3];
+        FpsText fps;
+        boolean full;
+        String cpu="CPU -- MHz",gpu="GPU -- MHz",ram="RAM --";
+        final String[] percentages = {"--","--","--"};
+        final float[] usage = {-1,-1,-1};
+        boolean same(Labels other,boolean compact) {
+            if(other==null)return false;
+            if(compact)return fps.compact.equals(other.fps.compact);
+            if(full!=other.full||!fps.heading.equals(other.fps.heading)||!fps.detail.equals(other.fps.detail)||!cpu.equals(other.cpu)||!gpu.equals(other.gpu)||!ram.equals(other.ram))return false;
+            for(int i=0;i<3;i++)if(Float.floatToIntBits(usage[i])!=Float.floatToIntBits(other.usage[i])||!percentages[i].equals(other.percentages[i]))return false;
+            return true;
+        }
     }
     private static State state(a0 view) {
         if (view.r2StatsState == null) view.r2StatsState = new State();
@@ -82,44 +93,56 @@ public final class StatsOverlay {
         parent.requestTransparentRegion(view);
     }
     public static void cancel(a0 view) {
-        if (view != null) state(view).generation++;
+        if (view != null) { state(view).generation++;state(view).latest=null; }
     }
+    public static void layoutChanged(a0 view) {State state=state(view);state.generation++;schedule(view);}
     public static void update(a0 view, float[] values) {
         State state = state(view);
         if (values == null) {
-            state.generation++; state.labels = null; view.a = null;
+            state.generation++; state.labels = null; state.latest=null; view.a = null;
             view.setVisibility(View.GONE); return;
         }
-        if (values.length < 5 || state.busy) return;
+        if (values.length < 5) return;
+        state.latest=values.clone();
+        if(view.i&&state.labels!=null&&state.labels.fps.sameReadout(values)){view.a=state.latest;return;}
+        schedule(view);
+    }
+    private static void schedule(a0 view) {
+        State state=state(view);if(state.busy||state.latest==null)return;
+        if(view.i&&state.labels!=null&&state.labels.fps.sameReadout(state.latest))return;
         state.busy = true;
-        final long generation = ++state.generation;
-        final float[] snapshot = values.clone();
+        final long generation = state.generation;
+        final float[] snapshot = state.latest;
+        final boolean compact=view.i;
         final WeakReference<a0> reference = new WeakReference<>(view);
         final ActivityManager manager = view.d;
         final String resolution = view.v;
         worker.execute(() -> {
             float ramPercent = -1, ramMb = -1;
             try {
-                if (manager != null) {
+                if (!compact&&manager != null) {
                     ActivityManager.MemoryInfo memory = new ActivityManager.MemoryInfo();
                     manager.getMemoryInfo(memory);
                     if (memory.totalMem > 0) ramPercent = (memory.totalMem-memory.availMem)*100f/memory.totalMem;
                 }
-                try (BufferedReader reader = new BufferedReader(new FileReader("/proc/self/statm"), 128)) {
+                if(!compact)try (BufferedReader reader = new BufferedReader(new FileReader("/proc/self/statm"), 128)) {
                     String line = reader.readLine();
                     if (line != null) ramMb = residentPages(line) * (float)Os.sysconf(OsConstants._SC_PAGESIZE) / 1048576f;
                 }
             } catch (IOException | RuntimeException ignored) { }
-            Labels labels = labels(snapshot, ramPercent, ramMb, resolution);
+            Labels labels = labels(snapshot, ramPercent, ramMb, resolution,!compact);
             final float memoryPercent = ramPercent, memoryMb = ramMb;
             main.post(() -> {
                 a0 target = reference.get();
                 if (target == null) return;
                 state.busy = false;
-                if (state.generation != generation) return;
+                if (state.generation != generation||target.i!=compact) {schedule(target);return;}
+                if(!compact)state.memorySamples++;
+                boolean changed=!labels.same(state.labels,compact)||target.getVisibility()!=View.VISIBLE;
                 state.labels = labels; target.a = snapshot;
                 target.b = memoryPercent; target.c = memoryMb;
-                target.setVisibility(View.VISIBLE); target.invalidate();
+                if(changed){target.setVisibility(View.VISIBLE);target.invalidate();state.redraws++;}
+                if(state.latest!=snapshot)schedule(target);
             });
         });
     }
@@ -133,15 +156,11 @@ public final class StatsOverlay {
     }
     private static String format(String pattern, Object... args) { return String.format(Locale.ROOT, pattern, args); }
     private static String clock(String name, float value) {
-        return value <= 0 ? name+" -- MHz" : value >= 1000 ? format("%s %.2f GHz",name,value/1000) : format("%s %.0f MHz",name,value);
+        return !Float.isFinite(value)||value <= 0 ? name+" -- MHz" : value >= 1000 ? format("%s %.2f GHz",name,value/1000) : format("%s %.0f MHz",name,value);
     }
-    private static Labels labels(float[] values, float ramPercent, float ramMb, String resolution) {
+    private static Labels labels(float[] values, float ramPercent, float ramMb, String resolution,boolean full) {
         Labels result = new Labels();
-        float multiplier = values.length > 5 ? values[5] : 0, output = values.length > 6 ? values[6] : 0;
-        result.fps = values[0] >= 0 ? format("%.0f FPS",values[0]) : "-- FPS";
-        if (multiplier > 1 && (output > 0 || values[0] >= 0)) result.fps = format("%.0f FPS %.0fx",output > 0 ? output : values[0]*multiplier,multiplier);
-        else if (multiplier < 0) result.fps += " · FG error";
-        result.heading = result.fps+" · "+resolution;
+        result.fps=new FpsText(values,resolution);result.full=full;if(!full)return result;
         result.cpu = clock("CPU",values[2]); result.gpu = clock("GPU",values[4]);
         result.ram = ramMb >= 1024 ? format("RAM %.1f GB",ramMb/1024) : ramMb >= 0 ? format("RAM %.0f MB",ramMb) : "RAM --";
         result.usage[0] = values[1]; result.usage[1] = values[3]; result.usage[2] = ramPercent;
@@ -155,20 +174,22 @@ public final class StatsOverlay {
         RectF rect=view.o; rect.set(0,0,w,h);
         Paint text=view.m;
         if (view.i) {
-            canvas.drawRoundRect(rect,h/2,h/2,view.j); text.setTextSize(13*d);
-            canvas.drawText(labels.fps,w/2,h/2-(text.ascent()+text.descent())/2,text); return;
+            canvas.drawRoundRect(rect,h/2,h/2,view.j); fit(text,labels.fps.compact,13*d,w-8*d);
+            canvas.drawText(labels.fps.compact,w/2,h/2-(text.ascent()+text.descent())/2,text); return;
         }
-        canvas.drawRoundRect(rect,12*d,12*d,view.j); text.setTextSize(13*d);
-        canvas.drawText(labels.heading,w/2,17*d,text);
+        canvas.drawRoundRect(rect,12*d,12*d,view.j); fit(text,labels.fps.heading,13*d,w-42*d);
+        canvas.drawText(labels.fps.heading,(w-22*d)/2,16*d,text);
+        text.setTextSize(9.5f*d);canvas.drawText(labels.fps.detail,w/2,29*d,text);
         canvas.drawCircle(w-16*d,14*d,9*d,view.n); text.setTextSize(14*d);
         canvas.drawText("–",w-16*d,14*d-(text.ascent()+text.descent())/2,text);
-        float y=50*d;
+        float y=56*d;
         gauge(view,canvas,state,labels,0,w*.18f,y,labels.cpu);
         gauge(view,canvas,state,labels,1,w*.5f,y,labels.gpu);
         gauge(view,canvas,state,labels,2,w*.82f,y,labels.ram);
     }
+    private static void fit(Paint paint,String text,float size,float width){paint.setTextSize(size);float measured=paint.measureText(text);if(measured>width&&width>0)paint.setTextSize(size*width/measured);}
     private static void gauge(a0 view,Canvas canvas,State state,Labels labels,int index,float x,float y,String label) {
-        float d=view.g, r=20*d; RectF rect=view.o; rect.set(x-r,y-r,x+r,y+r);
+        float d=view.g, r=18*d; RectF rect=view.o; rect.set(x-r,y-r,x+r,y+r);
         view.k.setStrokeWidth(5*d); view.l.setStrokeWidth(5*d);
         canvas.drawOval(rect,view.k);
         float usage=labels.usage[index];

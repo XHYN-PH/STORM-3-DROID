@@ -18,6 +18,10 @@ def apply(smali):
     if source.count(signature) != 1: raise ValueError('Touch artwork entry point changed')
     source = source.replace(signature, '.method public final r2DrawButton(Landroid/graphics/Canvas;La/c0;Z)V')
     source += signature+'\n    .locals 0\n    invoke-static {p0, p1, p2, p3}, Lcom/naruto/r2/TouchRender;->button(La/f0;Landroid/graphics/Canvas;La/c0;Z)V\n    return-void\n.end method\n'
+    signature='.method public final g(Landroid/graphics/Canvas;)V'
+    if source.count(signature)!=1:raise ValueError('Stock stick artwork entry point changed')
+    source=source.replace(signature,'.method public final r2DrawStick(Landroid/graphics/Canvas;)V')
+    source+=signature+'\n    .locals 0\n    invoke-static {p0, p1}, Lcom/naruto/r2/TouchRender;->stick(La/f0;Landroid/graphics/Canvas;)V\n    return-void\n.end method\n'
     old = '    invoke-virtual/range {p0 .. p0}, Landroid/view/View;->invalidate()V'
     count = source.count(old) + source.count('    invoke-virtual {p0}, Landroid/view/View;->invalidate()V')
     if count < 5: raise ValueError('Touch invalidation sites changed')
@@ -40,6 +44,12 @@ def apply(smali):
     source = source.replace(old, new)
     source += old+'\n    .locals 0\n    invoke-direct {p0, p1, p2}, La/a0;-><init>(Landroid/app/Activity;Landroid/content/SharedPreferences;)V\n    invoke-static {p0}, Lcom/naruto/r2/StatsOverlay;->resize(La/a0;)V\n    return-void\n.end method\n'
     stats.write_text(source)
+    signature='.method private setCollapsed(Z)V'
+    source=stats.read_text()
+    if source.count(signature)!=1:raise ValueError('Stock collapse method changed')
+    source=source.replace(signature,'.method private r2OriginalSetCollapsed(Z)V')
+    source+=signature+'\n    .locals 0\n    invoke-direct {p0, p1}, La/a0;->r2OriginalSetCollapsed(Z)V\n    invoke-static {p0}, Lcom/naruto/r2/StatsOverlay;->layoutChanged(La/a0;)V\n    return-void\n.end method\n'
+    stats.write_text(source)
     for signature, helper, descriptor, registers in [
         ('.method public final onDraw(Landroid/graphics/Canvas;)V','draw','La/a0;Landroid/graphics/Canvas;','{p0, p1}'),
         ('.method public setValues([F)V','update','La/a0;[F','{p0, p1}'),
@@ -54,8 +64,9 @@ def verify_stock(original, decoded):
         return {m.group(1):m.group() for m in re.finditer(r'^\.method ([^\n]+)\n.*?^\.end method$',path.read_text(),re.M|re.S)}
     before=methods(original/'smali/a/f0.smali'); after=methods(decoded/'smali/a/f0.smali')
     for signature,body in before.items():
-        current=after['public final r2DrawButton(Landroid/graphics/Canvas;La/c0;Z)V' if signature=='public final d(Landroid/graphics/Canvas;La/c0;Z)V' else signature]
-        current=current.replace('r2DrawButton(','d(')
+        renamed={'public final d(Landroid/graphics/Canvas;La/c0;Z)V':'public final r2DrawButton(Landroid/graphics/Canvas;La/c0;Z)V','public final g(Landroid/graphics/Canvas;)V':'public final r2DrawStick(Landroid/graphics/Canvas;)V'}
+        current=after[renamed.get(signature,signature)]
+        current=current.replace('r2DrawButton(','d(').replace('r2DrawStick(','g(')
         current=current.replace('invoke-static/range {p0 .. p0}, Lcom/naruto/r2/TouchRender;->invalidate(La/f0;)V','invoke-virtual/range {p0 .. p0}, Landroid/view/View;->invalidate()V')
         current=current.replace('invoke-static {p0}, Lcom/naruto/r2/TouchRender;->invalidate(La/f0;)V','invoke-virtual {p0}, Landroid/view/View;->invalidate()V')
         current=current.replace('invoke-static/range {v0 .. v6}, Lcom/naruto/r2/TouchRender;->layer(La/f0;Landroid/graphics/Canvas;FFFFI)I','invoke-virtual/range {v1 .. v6}, Landroid/graphics/Canvas;->saveLayerAlpha(FFFFI)I')
@@ -63,5 +74,8 @@ def verify_stock(original, decoded):
     before=methods(original/'smali/a/a0.smali'); after=methods(decoded/'smali/a/a0.smali')
     allowed={'public constructor <init>(Lcom/naruto/port/NarutoActivity;Landroid/content/SharedPreferences;)V','public final a()V','public final onDraw(Landroid/graphics/Canvas;)V','public setValues([F)V'}
     for signature,body in before.items():
+        if signature=='private setCollapsed(Z)V':
+            if after['private r2OriginalSetCollapsed(Z)V'].replace('r2OriginalSetCollapsed(','setCollapsed(')!=body:raise AssertionError('Stock collapse behavior changed')
+            continue
         if signature not in allowed and after.get(signature)!=body:raise AssertionError('Unintended statistics gesture change: '+signature)
     print('PASS: stock touch input/editor logic, controller mappings and panel gestures preserved.')

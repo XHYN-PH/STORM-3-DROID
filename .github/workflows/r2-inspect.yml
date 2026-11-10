@@ -72,6 +72,14 @@ jobs:
         run: python3 preview.py game-menu 1
       - name: game-menu preview part 2
         run: python3 preview.py game-menu 2
+      - name: Statistics preview part 1
+        run: python3 preview.py statistics 1
+      - name: Statistics preview part 2
+        run: python3 preview.py statistics 2
+      - name: Closing preview part 1
+        run: python3 preview.py closing 1
+      - name: Closing preview part 2
+        run: python3 preview.py closing 2
   startup-evidence:
     if: ${{ inputs.startup_evidence }}
     runs-on: ubuntu-24.04

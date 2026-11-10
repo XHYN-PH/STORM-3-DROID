@@ -81,12 +81,11 @@ jobs:
           from pathlib import Path
           import os
           root=Path(os.environ['RUNNER_TEMP'])/'r1-results'
-          chunks=[]
-          for name in ['android-command-log.txt','android-instrumentation.txt','android-crashes.txt']:
+          for name in ['android-instrumentation.txt','android-crashes.txt','android-command-log.txt']:
               path=root/name
-              if path.exists(): chunks.append(name+': '+path.read_text(errors='replace')[-2200:])
-          text='\n'.join(chunks).replace('%','%25').replace('\r','%0D').replace('\n','%0A')
-          print('::error title=Android installation or runtime failure::'+text)
+              if not path.exists(): continue
+              text=path.read_text(errors='replace')[-3400:].replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+              print('::error title=Android failure '+name+'::'+text)
           PYDIAG
             return "$result"
           }
@@ -95,21 +94,17 @@ jobs:
           timeout --kill-after=10 90 "$ANDROID_HOME/platform-tools/adb" install --no-incremental -t -r "$RUNNER_TEMP/r1-tools/R2-tests.apk"
           "$ANDROID_HOME/platform-tools/adb" shell settings put system font_scale "${{ matrix.font }}"
           "$ANDROID_HOME/platform-tools/adb" logcat -c
-          timeout --kill-after=10 300 "$ANDROID_HOME/platform-tools/adb" shell am instrument -w -r com.naruto.storm3.r2tests/com.naruto.r2tests.R2Instrumentation | tee "$RUNNER_TEMP/r1-results/android-instrumentation.txt"
+          timeout --kill-after=10 420 "$ANDROID_HOME/platform-tools/adb" shell am instrument -w -r com.naruto.storm3.r2tests/com.naruto.r2tests.R2Instrumentation | tee "$RUNNER_TEMP/r1-results/android-instrumentation.txt"
           timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" root
           timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" wait-for-device
-          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-launcher.png "$RUNNER_TEMP/r1-results/launcher.png" || true
-          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-controller.png "$RUNNER_TEMP/r1-results/controller.png" || true
-          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-launcher.preview.jpg "$RUNNER_TEMP/r1-results/launcher.preview.jpg" || true
-          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-controller.preview.jpg "$RUNNER_TEMP/r1-results/controller.preview.jpg" || true
-          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-display.png "$RUNNER_TEMP/r1-results/display.png" || true
-          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-display.preview.jpg "$RUNNER_TEMP/r1-results/display.preview.jpg" || true
-          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-game-menu.png "$RUNNER_TEMP/r1-results/game-menu.png" || true
-          timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull /sdcard/Android/data/com.naruto.storm3/files/r2-tests-game-menu.preview.jpg "$RUNNER_TEMP/r1-results/game-menu.preview.jpg" || true
+          for name in launcher controller display game-menu statistics closing; do
+            timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull "/sdcard/Android/data/com.naruto.storm3/files/r2-tests-$name.png" "$RUNNER_TEMP/r1-results/$name.png" || true
+            timeout --kill-after=5 30 "$ANDROID_HOME/platform-tools/adb" pull "/sdcard/Android/data/com.naruto.storm3/files/r2-tests-$name.preview.jpg" "$RUNNER_TEMP/r1-results/$name.preview.jpg" || true
+          done
           python3 - <<'PYPREVIEW'
           import os,base64
           from pathlib import Path
-          for name in ['launcher','controller','display','game-menu']:
+          for name in ['launcher','controller','display','game-menu','statistics','closing']:
               image=Path(os.environ['RUNNER_TEMP'])/'r1-results'/f'{name}.preview.jpg'
               if not image.exists(): continue
               data=image.read_bytes()

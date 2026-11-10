@@ -1,3 +1,17 @@
+# R2.3 performance follow-up
+
+The latest supplied renderer capture spans roughly 9.5 minutes. Its median ten-second game rate is 30 FPS, median render-busy time 5.6 ms and median reported GPU time 13.7 ms. Frame generation separately reports a median 6.7 ms; those numbers must not be added without knowing their measurement boundaries. Individual reported frame maxima still reach 154–231 ms after startup. GPU usage peaks at 836 MB against a 3566–3668 MB budget; actual streaming-cache usage peaks at 9 MB in its 64 MB pool. No renderer errors or memory pressure are recorded.
+
+The last FG report changes from 60 to 121 Hz with 33 shown-late frames. Its foreground/background context is absent, so that report alone does not establish a foreground refresh bug. R2.3 reaffirms the selected rate after resume/focus and a mismatching display-mode change only while gameplay owns focus. Recovery is debounced and limited to two display-change retries per focus period; pause removes listeners and pending callbacks. Manual selections remain authoritative. Surface hints use the existing surface directly, without registering repeated SurfaceHolder callbacks. Android may override app preferences.
+
+Collapsed statistics mode skips memory collection, CPU/GPU/RAM text preparation and unchanged readout redraws. Expanding requests a full sample using the most recent native values. Generation checks prevent a late compact/full sample from applying to the wrong mode or reappearing after hide/pause. The native statistics getter itself is retained; no claim is made that its internal work has been removed.
+
+The stock panel now labels game FPS separately from generated output. Calculated output is prefixed with `~`; missing values remain unavailable. Its size control and gestures remain. The remaining left-stick base, arrows and knob gradients are cached independently, letting the knob move without rebuilding artwork. The original stock renderer remains the editor/software fallback, and input mappings/deadzones are unchanged.
+
+The native-stall investigation remains open. This workspace has no ADB-connected phone or actual game files. `tools/capture_stall_trace.py` is ready to collect a local system trace during the affected scene. No unsafe asynchronous-pipeline flag, native synchronization patch, preset or game-speed unlock is introduced. Full game performance still needs device measurement.
+
+---
+
 # R2.2 implementation and native investigation
 
 The touch renderer records the original translated button commands in bounded-count RenderNodes (two states per button). Moving/resizing a button invalidates both recordings; software canvases and the editor use the original method. No button layout, input mapping, stick behavior or macro timings change. Repeated input still reaches the stock input code immediately; redraw requests are skipped only when the visible state is unchanged. The original grouped opacity operation remains, with conservative bounds excluding empty vertical bands where the layout permits. Default layouts spanning the whole display may get no reduction from that bound.
