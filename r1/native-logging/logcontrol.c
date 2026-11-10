@@ -435,3 +435,10 @@ JNIEXPORT jboolean JNICALL Java_com_naruto_port_LoggingControl_nativeInstall(JNI
     pthread_mutex_unlock(&lock);
     return ready && state.main_seen && state.hooks > 0 && state.failures == 0 ? JNI_TRUE : JNI_FALSE;
 }
+/* Read inside the same ABI/libc as the engine. Android native-bridge guests can
+ * have a different environment from host Java's Os.getenv during CI. */
+JNIEXPORT jboolean JNICALL Java_com_naruto_port_LoggingControl_nativeEarlyCutoff(JNIEnv *env, jclass klass) {
+    (void)env; (void)klass;
+    const char *value = getenv("XNR_LOG_LEVEL");
+    return value && strcmp(value, "5") == 0 ? JNI_TRUE : JNI_FALSE;
+}

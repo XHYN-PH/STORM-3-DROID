@@ -92,7 +92,7 @@ def build(args):
     report = json.loads((ROOT/'translation-report.json').read_text())
     report.update({'version': 'R2.2' if args.r2 else 'R1', 'version_code': 50 if args.r2 else 47, 'built': True, 'signed': True,
                    'native_logging_helper_compiled': True, 'artifact_sha256': digest(out),
-                   'host_logging_assertions': 83, 'android_runtime_tested': False})
+                   'host_logging_assertions': 85, 'android_runtime_tested': False})
     (out.parent/'build-report.json').write_text(json.dumps(report, indent=2, ensure_ascii=False)+'\n')
     (out.parent/'SHA256SUMS').write_text(digest(out)+'  '+out.name+'\n')
     print('R1 APK built and signed:', out)

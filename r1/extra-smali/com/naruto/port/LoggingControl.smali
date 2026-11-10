@@ -101,3 +101,6 @@
 
 .method private static native nativeInstall()Z
 .end method
+
+.method private static native nativeEarlyCutoff()Z
+.end method

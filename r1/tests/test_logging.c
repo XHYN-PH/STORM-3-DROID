@@ -86,8 +86,10 @@ static void test_relro(void) {
 static void test_early_level(void) {
     CHECK(unsetenv("XNR_LOG_LEVEL") == 0);
     CHECK(configure_early_logging(false)); CHECK(!strcmp(getenv("XNR_LOG_LEVEL"), "5"));
+    CHECK(Java_com_naruto_port_LoggingControl_nativeEarlyCutoff(NULL, NULL) == JNI_TRUE);
     CHECK(configure_early_logging(false)); CHECK(!strcmp(getenv("XNR_LOG_LEVEL"), "5"));
     CHECK(configure_early_logging(true)); CHECK(getenv("XNR_LOG_LEVEL") == NULL);
+    CHECK(Java_com_naruto_port_LoggingControl_nativeEarlyCutoff(NULL, NULL) == JNI_FALSE);
     level_saved = false;
     CHECK(setenv("XNR_LOG_LEVEL", "3", 1) == 0);
     CHECK(configure_early_logging(false)); CHECK(!strcmp(getenv("XNR_LOG_LEVEL"), "5"));

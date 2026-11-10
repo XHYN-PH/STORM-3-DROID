@@ -304,7 +304,8 @@ public final class R2Instrumentation extends Instrumentation {
             check(Boolean.TRUE.equals(install.invoke(null)),"Installing native logging hooks again is safe");
             touch(logging);
             check(!prefs.getBoolean("logging_enabled",true),"Turning Logging off persists its setting");
-            check("5".equals(android.system.Os.getenv("XNR_LOG_LEVEL")),"Logging off selects the native early message cutoff");
+            Method earlyCutoff=control.getDeclaredMethod("nativeEarlyCutoff");earlyCutoff.setAccessible(true);
+            check(Boolean.TRUE.equals(earlyCutoff.invoke(null)),"Logging off selects the early cutoff in the engine ABI");
             check(!state.getBoolean(logging),"Logging switch reflects its disabled state");
             emit.invoke(null,"R1_NATIVE_TEST","R1_LOGGING_OFF_MARKER");
             trace.invoke(null,new RuntimeException("R1_STACK_OFF_MARKER"));
