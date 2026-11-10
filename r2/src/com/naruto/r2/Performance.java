@@ -1,7 +1,6 @@
 /* Copyright (c) 2026 XHYN_PH. SPDX-License-Identifier: MIT */
 package com.naruto.r2;
 import android.app.Activity;
-import android.content.SharedPreferences;
 import android.view.*;
 import com.naruto.port.NarutoActivity;
 
@@ -16,5 +15,4 @@ public final class Performance {
    a.surfaceFrameRate=Math.round(best.getRefreshRate());
   }catch(RuntimeException ignored){}
  }
- public static void balanced(Activity a,int resolution){SharedPreferences p=GameHooks.prefs(a);p.edit().putInt("menu_resolution_v5",resolution==4?4:3).putInt("menu_antialiasing",1).putInt("menu_upscaling",1).putInt("menu_framegen",1).putInt("menu_framegen_mode",0).putInt("menu_screen_hz",0).putInt("menu_fps",2).putBoolean("menu_performance",false).apply();}
 }

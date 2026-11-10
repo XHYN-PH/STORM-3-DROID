@@ -33,6 +33,7 @@ public final class GameMenu {
  public static AlertDialog open(Activity host,Actions actions){SharedPreferences p=GameHooks.prefs(host);LinearLayout body=ModernUi.body(host);final AlertDialog[] owner=new AlertDialog[1];
   body.addView(ModernUi.action(host,"Display mode",screenName(p.getInt("r2_screen",p.getInt("menu_screen_v3",0))),()->{owner[0].dismiss();actions.display();}));
   body.addView(ModernUi.toggle(host,"Show FPS",null,p.getBoolean("menu_stats",true),(v,on)->actions.stats(on)));
+  body.addView(ModernUi.action(host,"FPS / statistics size",null,()->{owner[0].dismiss();StatsOverlay.sizeDialog(host,host instanceof NarutoActivity?((NarutoActivity)host).statsView:null);}));
   body.addView(ModernUi.toggle(host,"Touch controls",null,!p.getBoolean("r2_hide_touch",false),(v,on)->actions.touch(on)));
   body.addView(ModernUi.toggle(host,"Touch with controller","Keep touch buttons visible with a controller connected",p.getBoolean("touch_with_controller",false),(v,on)->actions.controller(on)));
   body.addView(ModernUi.action(host,"Control opacity",null,()->{owner[0].dismiss();actions.opacity();}));

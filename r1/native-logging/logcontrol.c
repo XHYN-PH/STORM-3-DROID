@@ -43,6 +43,22 @@ static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static atomic_bool enabled = true;
 static bool symbols_ready, priority_saved;
 static int previous_priority, saved_out = -1, saved_err = -1;
+static bool level_saved;
+static char *original_level;
+
+/* The pinned engine reads this before SDL_main rendering initialization. Its
+ * predicate accepts a message when configured_level <= message_level (0..4).
+ * Level 5 avoids the guarded message construction, without patching instructions.
+ * Keep any pre-existing environment override when capture is restored. */
+static bool configure_early_logging(bool capture) {
+    if (!level_saved) {
+        const char *value = getenv("XNR_LOG_LEVEL");
+        if (value) { original_level = strdup(value); if (!original_level) return false; }
+        level_saved = true;
+    }
+    if (!capture) return setenv("XNR_LOG_LEVEL", "5", 1) == 0;
+    return original_level ? setenv("XNR_LOG_LEVEL", original_level, 1) == 0 : unsetenv("XNR_LOG_LEVEL") == 0;
+}
 
 static void discard_android_log(const struct __android_log_message *message) {
     (void)message;
@@ -394,6 +410,7 @@ JNIEXPORT jboolean JNICALL Java_com_naruto_port_LoggingControl_nativeSetEnabled(
     (void)env; (void)klass;
     pthread_mutex_lock(&lock);
     bool ok = resolve_symbols();
+    if (ok) ok = configure_early_logging(capture != 0);
     if (ok) {
         atomic_store_explicit(&enabled, capture != 0, memory_order_release);
         if (!capture) {

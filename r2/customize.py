@@ -2,6 +2,7 @@
 # Copyright (c) 2026 XHYN_PH. SPDX-License-Identifier: MIT
 """Apply R2 to the verified English R1 decoded tree; no APK assembly/signing."""
 import re,shutil,argparse
+import overlay_patches
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
 
@@ -42,7 +43,8 @@ def customize(root):
  change(game,'.method public onDestroy()V',lambda b:returns(b,call('GameHooks','gameStop(Landroid/app/Activity;)V')))
  # Keep the stock in-game Fit/Stretch menu authoritative when used.
  change(game,'.method private applyStretch(Z)V',lambda b:start(b,call('GameHooks','stockScreen(Landroid/app/Activity;Z)V',1)))
- # Original touch layout, physical axes, R3 and mapping UI remain untouched.
+ # Original physical axes, bindings and mapping UI remain untouched.
+ overlay_patches.apply(smali)
  # Stock SDL already caches motion ranges; avoid an Iterator allocation on each lookup.
  joystick=smali/'org/libsdl/app/SDLJoystickHandler_API16.smali'
  change(joystick,'.method public getJoystick(I)Lorg/libsdl/app/SDLJoystickHandler_API16$SDLJoystick;',lambda b:'.method public getJoystick(I)Lorg/libsdl/app/SDLJoystickHandler_API16$SDLJoystick;\n    .locals 4\n    iget-object v0, p0, Lorg/libsdl/app/SDLJoystickHandler_API16;->mJoysticks:Ljava/util/ArrayList;\n    const/4 v1, 0x0\n    :r2_lookup\n    invoke-virtual {v0}, Ljava/util/ArrayList;->size()I\n    move-result v2\n    if-ge v1, v2, :r2_missing\n    invoke-virtual {v0, v1}, Ljava/util/ArrayList;->get(I)Ljava/lang/Object;\n    move-result-object v2\n    check-cast v2, Lorg/libsdl/app/SDLJoystickHandler_API16$SDLJoystick;\n    iget v3, v2, Lorg/libsdl/app/SDLJoystickHandler_API16$SDLJoystick;->device_id:I\n    if-eq v3, p1, :r2_found\n    add-int/lit8 v1, v1, 0x1\n    goto :r2_lookup\n    :r2_found\n    return-object v2\n    :r2_missing\n    const/4 v2, 0x0\n    return-object v2\n.end method')
@@ -95,7 +97,7 @@ def customize(root):
  strings=root/'res/values/strings.xml';text=strings.read_text();text,n=re.subn(r'(<string name="app_name">)[^<]*(</string>)',r'\g<1>STORM 3\2',text);assert n==1;strings.write_text(text)
  image=root/'res/drawable/storm3_icon.png';image.parent.mkdir(exist_ok=True);shutil.copyfile(ROOT/'assets/storm3_icon.png',image)
  manifest=root/'AndroidManifest.xml';text=manifest.read_text().replace('android:icon="@mipmap/ic_storm3"','android:icon="@drawable/storm3_icon"').replace('android:roundIcon="@mipmap/ic_storm3"','android:roundIcon="@drawable/storm3_icon"');manifest.write_text(text)
- yaml=root/'apktool.yml';text=yaml.read_text().replace('  versionCode: 47','  versionCode: 49').replace('  versionName: R1','  versionName: R2.1');yaml.write_text(text)
+ yaml=root/'apktool.yml';text=yaml.read_text().replace('  versionCode: 47','  versionCode: 50').replace('  versionName: R1','  versionName: R2.2');yaml.write_text(text)
  print('PASS: refined R2 menus, performance/lifecycle hooks, stock controls, app name/icon and version applied.')
 if __name__=='__main__':
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('decoded',type=Path);customize(p.parse_args().decoded)

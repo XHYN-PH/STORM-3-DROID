@@ -6,6 +6,7 @@ Default: off. The setting is persisted independently of `naruto.ini`, so the lau
 
 When off, the staged implementation:
 
+- Sets the pinned engine's supported `XNR_LOG_LEVEL=5` threshold before engine initialization, skipping guarded messages before formatting. Logging On restores the original environment override.
 - Installs a discard callback and silent priority through Android API 30's process-local liblog API. This covers app logcat output, including Java/SDL/FFmpeg paths routed through liblog.
 - Redirects the process's stdout and stderr to `/dev/null`.
 - After the native libraries load and before the SDL main thread starts, redirects writable `.log` opens to `/dev/null` in the APK's own libraries. This covers the inspected `naruto.log`, `xenia.log` and `plume_stderr.log` file sinks; it does not merely hide Send Log.
@@ -13,7 +14,7 @@ When off, the staged implementation:
 
 When on, original file paths and the ordinary Android logd callback are used. File hooks remain installed but pass the original paths through. The policy does not delete old logs.
 
-Boundaries: Android system/crash logs outside this process are not controlled. GPU capability, driver-recovery, configuration, save and shader-cache files remain intact. No claim of zero logging CPU overhead is made: compiled logging calls can still format messages or write to `/dev/null`. Arbitrary debug dumps enabled by future settings need their own audit.
+Boundaries: Android system/crash logs outside this process are not controlled. GPU capability, driver-recovery, configuration, save and shader-cache files remain intact. The early threshold covers the native logger's guarded messages. Independent direct logging paths can still format messages or write to `/dev/null`; zero logging CPU overhead is not claimed. Arbitrary debug dumps enabled by future settings need their own audit.
 
 Static checks are insufficient to establish complete output suppression. Validate liblog behavior, ELF import hooks, permission restoration, logging On/Off, restarting the game, and actual files/logcat on Android 11+ before distributing an APK. Partial hook installation is reported as a failure. The code does not modify the original ELF files or patch native instructions.
 

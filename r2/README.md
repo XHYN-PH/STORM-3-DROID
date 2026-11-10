@@ -1,4 +1,4 @@
-# STORM 3 — R2.1 customization
+# STORM 3 — R2.2 customization
 
 Modified and Translated by **XHYN_PH**.
 
@@ -9,7 +9,10 @@ R2 keeps the launcher layout and stock controller mapping screen, with a shared 
 ## Included
 
 - STORM 3 name and circular gold Leaf icon.
-- Balanced 720p / 900p starting presets: FXAA, FSR, 2× frame generation with Performance flow, and automatic display refresh. Existing main settings remain editable.
+- Cached stock touch-button artwork, redundant redraw suppression and conservative transparency-layer bounds. Input mappings, layout and macro timings remain original.
+- Smaller stock FPS/statistics panel with a saved 50–125% size slider in Display and Game options. Memory sampling and label formatting run off the UI thread.
+- Supported native early logging cutoff when Logging is off, in addition to output suppression. Original Send log remains available.
+- The added Performance presets menu is removed; current graphics selections are preserved.
 - Auto refresh chooses a display mode suited to generated output, preferring a lower matching refresh over a higher one. Manual refresh selections remain available.
 - Hidden FPS statistics no longer trigger native statistics or memory polling. Completed loading preparation stops polling. Game pause/destruction cancels polling and resume restarts only needed tasks.
 - Launcher ambient/logo animation pauses while the launcher is hidden. Drawing loops stop scheduling when hidden, and animation resumes when the launcher returns.
@@ -19,7 +22,7 @@ R2 keeps the launcher layout and stock controller mapping screen, with a shared 
 - Opening-video preference, gamma, shadow cap, GPU-memory and streaming-cache choices; overrides run after the stock config writer.
 - Save ZIP export/share and backup create/export/restore/delete; driver information and system-driver reset.
 
-Added rumble, invisible right stick, axis calibration, controller preview/reset, performance history and diagnostics export have been removed. Touch input, controller mappings, SDL haptics and the original FPS widget are restored to R1 source exactly. The original controller binding list still includes its stock L3/R3 bindings.
+Added rumble, invisible right stick, axis calibration, controller preview/reset, performance history and diagnostics export have been removed. Touch input logic, controller mappings and SDL haptics retain the R1 behavior. The stock FPS panel keeps its appearance and gestures, with the requested size and sampling changes. The original controller binding list still includes its stock L3/R3 bindings.
 
 The game menu applies only controls supported at runtime. Settings in the launcher apply on the next game launch. Reopen the launcher for the opening-video preference.
 
@@ -50,7 +53,7 @@ python3 r1/build_r1.py --r2 \
   --build-tools /path/to/build-tools/35.0.0 \
   --keystore /private/path/release.p12 \
   --password-file /private/path/keystore.pass \
-  --output /path/to/STORM-3-R2.1-arm64.apk
+  --output /path/to/STORM-3-R2.2-arm64.apk
 ```
 
 `compile_runtime.py` compiles the added Java classes using signature-only stubs for upstream classes. Those stubs are excluded from the DEX. Apktool disassembles the runtime and `customize.py` applies checked hooks to the translated base. All engine executable sections, bundled data and notices remain protected by source verification. R1 builds keep their original defaults unless `--r2` is explicitly supplied.
@@ -62,3 +65,5 @@ Actual FPS gains depend on the device, scene and selected driver. Presets reduce
 See [TESTING.md](TESTING.md) for the exact automated coverage and outstanding device checks. Gameplay shutdown/save completion, Xbox behavior and physical Adreno/Turnip presentation require game-data testing on a phone.
 
 Original R2 Java, scripts and tests are MIT-licensed; upstream rights and notices remain unchanged.
+
+See [performance implementation notes](PERFORMANCE-NOTES.md) for native logging evidence and the remaining device-trace requirement.

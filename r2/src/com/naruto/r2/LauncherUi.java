@@ -22,7 +22,7 @@ public final class LauncherUi {
             while(v.getParent() instanceof View){View parent=(View)v.getParent();if((parent instanceof ScrollView||parent.getClass().getName().equals("a.i"))&&v instanceof LinearLayout){root=(LinearLayout)v;break;}v=parent;}
         }
         if(root==null)throw new IllegalStateException("Stock settings container was not found.");
-        add(a,root,a.q("More options",buttons(a,new String[]{"Display","Performance","Saves","Tools"},new Runnable[]{()->display(a),()->performance(a),()->saves(a),()->tools(a)})));
+        add(a,root,a.q("More options",buttons(a,new String[]{"Display","Saves","Tools"},new Runnable[]{()->display(a),()->saves(a),()->tools(a)})));
 
     }
     private static void display(LauncherActivity a){LinearLayout body=dialogBody(a);
@@ -30,9 +30,9 @@ public final class LauncherUi {
         body.addView(dialogToggle(a,"Opening video","Show the launcher video","r2_video",true));
         body.addView(ModernUi.action(a,"Screen mode",GameMenu.screenName(GameHooks.prefs(a).getInt("r2_screen",GameHooks.prefs(a).getInt("menu_screen_v3",0))),()->screen(a)));
         body.addView(ModernUi.action(a,"Brightness",null,()->gamma(a)));
+        body.addView(ModernUi.action(a,"FPS / statistics size",null,()->StatsOverlay.sizeDialog(a,null)));
         body.addView(ModernUi.action(a,"Shadows",null,()->choice(a,"Shadow quality","r2_shadow",new String[]{"Auto (original)","360 · lower","720 · original cap","1080 · higher"},new int[]{0,360,720,1080},0,null)));
         new ModernUi.Builder(a).setTitle("Display").setView(ModernUi.scroll(a,body)).setPositiveButton("Done",null).show();}
-    private static void performance(LauncherActivity a){final AlertDialog[] owner=new AlertDialog[1];LinearLayout body=dialogBody(a);body.addView(ModernUi.text(a,"Choose a starting point, then adjust the main settings as needed.",13,ModernUi.MUTED));for(int resolution:new int[]{3,4}){final int pick=resolution;body.addView(ModernUi.action(a,"Balanced · "+(pick==3?"720p":"900p"),"FXAA · FSR · 2× frame generation · Performance flow · Auto display",()->new ModernUi.Builder(a).setTitle("Apply balanced "+(pick==3?"720p":"900p")+"?").setMessage("Updates resolution, antialiasing, upscaling, frame generation and display rate. Save files are kept.").setNegativeButton("Cancel",null).setPositiveButton("Apply",(d,w)->{Performance.balanced(a,pick);if(owner[0]!=null)owner[0].dismiss();a.t();a.recreate();}).show()));}owner[0]=new ModernUi.Builder(a).setTitle("Performance").setView(ModernUi.scroll(a,body)).setPositiveButton("Done",null).show();}
     private static void saves(LauncherActivity a){new ModernUi.Builder(a).setTitle("Save files").setItems(new String[]{"Export current save","Manage backups"},(d,w)->{if(w==0)export(a,null);else backups(a);}).show();}
     private static void tools(LauncherActivity a){new ModernUi.Builder(a).setTitle("Tools").setItems(new String[]{"GPU memory budget","Streaming cache","Driver information"},(d,w)->{if(w==0)choice(a,"GPU memory budget","r2_budget",new String[]{"Auto (recommended)","768 MB","1024 MB","1400 MB","2048 MB"},new int[]{0,768,1024,1400,2048},0,null);else if(w==1)choice(a,"Streaming cache","r2_cache",new String[]{"Auto (recommended)","64 MB","128 MB","256 MB"},new int[]{0,64,128,256},0,null);else driver(a);}).show();}
     private static void add(LauncherActivity a,LinearLayout root,View card){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=a.b(6);root.addView(card,lp);}

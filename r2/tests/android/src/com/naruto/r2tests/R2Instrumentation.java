@@ -115,7 +115,7 @@ public final class R2Instrumentation extends Instrumentation {
     private void verifyR2(final Context context,final ClassLoader loader,List<View> views)throws Exception {
         waitForIdleSync();screenshot(context,"launcher");
         check("STORM 3".contentEquals(context.getApplicationInfo().loadLabel(context.getPackageManager())),"Installed app is named STORM 3");
-        check(hasText(views,"Performance"),"Performance presets are exposed in the launcher");
+        check(!hasText(views,"Performance"),"Added performance presets are removed from the launcher");
         check(hasText(views,"More options"),"Stock launcher contains one compact More options card");
         android.graphics.drawable.Drawable icon=context.getApplicationInfo().loadIcon(context.getPackageManager());android.graphics.Bitmap iconImage=android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888);icon.setBounds(0,0,64,64);icon.draw(new android.graphics.Canvas(iconImage));check(android.graphics.Color.alpha(iconImage.getPixel(0,0))==0&&android.graphics.Color.alpha(iconImage.getPixel(32,32))>0,"Circular app icon has transparent corners and an opaque center");iconImage.recycle();
         check(Class.forName("a.a0",true,loader).getDeclaredMethod("setValues",float[].class)!=null,"Patched stock statistics class verifies on Android");
@@ -127,6 +127,7 @@ public final class R2Instrumentation extends Instrumentation {
         screenshot(context,"display");
         List<android.view.accessibility.AccessibilityNodeInfo> done=root.findAccessibilityNodeInfosByText("Done");check(!done.isEmpty(),"Display has a Done action");android.graphics.Rect doneBounds=new android.graphics.Rect();done.get(0).getBoundsInScreen(doneBounds);android.util.DisplayMetrics metrics=context.getResources().getDisplayMetrics();check(doneBounds.top>=0&&doneBounds.bottom<=metrics.heightPixels&&doneBounds.height()>=Math.round(metrics.density*32),"Display Done action stays visible at the configured font scale");check(done.get(0).performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK),"Stock settings dialog closes normally");waitForIdleSync();
         testSaveFiles(context,loader);
+        testOverlays(context,loader);
         Class<?> math=Class.forName("com.naruto.r2.GameHooks",true,loader);
         check(Math.abs(((Float)math.getMethod("cropScale",float.class,float.class,int.class).invoke(null,2400f,1080f,100))-1.25f)<.001f,"Proportional crop uses equal scale for both dimensions");
         testModernMenu(context,loader);
@@ -158,7 +159,7 @@ public final class R2Instrumentation extends Instrumentation {
         final android.app.AlertDialog[] dialog=new android.app.AlertDialog[1];final Throwable[] error=new Throwable[1];
         runOnMainSync(()->{try{dialog[0]=(android.app.AlertDialog)menu.getMethod("open",Activity.class,actions).invoke(null,launcher,listener);List<View> views=new ArrayList<>();collect(dialog[0].getWindow().getDecorView(),views);
             check(hasText(views,"Game options")&&hasText(views,"Return to launcher")&&hasText(views,"Resume"),"Modern game menu exposes resume and launcher return");
-            check(hasText(views,"Control opacity")&&hasText(views,"Brightness")&&hasText(views,"Touch controls"),"Expanded game menu contains live controls");
+            check(hasText(views,"Control opacity")&&hasText(views,"Brightness")&&hasText(views,"Touch controls")&&hasText(views,"FPS / statistics size"),"Expanded game menu contains live controls");
             check(!hasText(views,"Rumble")&&!hasText(views,"Performance history")&&!hasText(views,"Export diagnostics"),"Removed features do not appear in the game menu");
             View fps=named(views,"Show FPS");((View)fps.getParent().getParent()).performClick();check(calls.contains("stats"),"Game-menu FPS switch invokes its action");
         }catch(Throwable e){error[0]=e;}});if(error[0]!=null)throw new RuntimeException(error[0]);
@@ -168,11 +169,86 @@ public final class R2Instrumentation extends Instrumentation {
         runOnMainSync(()->{try{dialog[0]=(android.app.AlertDialog)menu.getMethod("confirmExit",Activity.class,Runnable.class).invoke(null,launcher,(Runnable)()->exits[0]++);check(dialog[0].isShowing(),"Exit confirmation opens before leaving");dialog[0].getButton(-2).performClick();check(exits[0]==0,"Cancelling exit keeps the game running");}catch(Throwable e){error[0]=e;}});if(error[0]!=null)throw new RuntimeException(error[0]);
         waitForIdleSync();
         runOnMainSync(()->{try{dialog[0]=(android.app.AlertDialog)menu.getMethod("confirmExit",Activity.class,Runnable.class).invoke(null,launcher,(Runnable)()->exits[0]++);dialog[0].getButton(-1).performClick();}catch(Throwable e){error[0]=e;}});if(error[0]!=null)throw new RuntimeException(error[0]);waitForIdleSync();check(exits[0]==1,"Confirmed exit invokes its supplied action exactly once");
-        final SharedPreferences prefs=context.getSharedPreferences("naruto",0);java.util.Map<String,?> original=new java.util.HashMap<>(prefs.getAll());
-        Class.forName("com.naruto.r2.Performance",true,loader).getMethod("balanced",Activity.class,int.class).invoke(null,launcher,3);
-        check(prefs.getInt("menu_resolution_v5",0)==3&&prefs.getInt("menu_antialiasing",0)==1&&prefs.getInt("menu_framegen_mode",1)==0&&prefs.getInt("menu_screen_hz",-1)==0,"Balanced 720p writes lighter graphics and automatic display settings");
-        Class.forName("com.naruto.r2.Performance",true,loader).getMethod("balanced",Activity.class,int.class).invoke(null,launcher,4);check(prefs.getInt("menu_resolution_v5",0)==4,"Balanced 900p is selectable");
-        SharedPreferences.Editor edit=prefs.edit().clear();for(java.util.Map.Entry<String,?> e:original.entrySet()){Object v=e.getValue();if(v instanceof String)edit.putString(e.getKey(),(String)v);else if(v instanceof Integer)edit.putInt(e.getKey(),(Integer)v);else if(v instanceof Float)edit.putFloat(e.getKey(),(Float)v);else if(v instanceof Boolean)edit.putBoolean(e.getKey(),(Boolean)v);else if(v instanceof Long)edit.putLong(e.getKey(),(Long)v);}edit.commit();
+
+    }
+    private android.graphics.Bitmap region(View view) {
+        waitForIdleSync(); SystemClock.sleep(100);
+        final int[] xy=new int[2]; runOnMainSync(()->view.getLocationOnScreen(xy));
+        android.graphics.Bitmap screen=getUiAutomation().takeScreenshot();
+        android.graphics.Bitmap result=android.graphics.Bitmap.createBitmap(screen,xy[0],xy[1],view.getWidth(),view.getHeight());
+        if(result!=screen)screen.recycle(); return result;
+    }
+    private boolean samePixels(android.graphics.Bitmap left,android.graphics.Bitmap right) {
+        if(left.getWidth()!=right.getWidth()||left.getHeight()!=right.getHeight())return false;
+        int[] a=new int[left.getWidth()*left.getHeight()],b=new int[a.length];
+        left.getPixels(a,0,left.getWidth(),0,0,left.getWidth(),left.getHeight());
+        right.getPixels(b,0,right.getWidth(),0,0,right.getWidth(),right.getHeight());
+        int changed=0;
+        for(int i=0;i<a.length;i++)if(a[i]!=b[i]) {
+            int delta=Math.max(Math.abs(android.graphics.Color.red(a[i])-android.graphics.Color.red(b[i])),Math.max(Math.abs(android.graphics.Color.green(a[i])-android.graphics.Color.green(b[i])),Math.abs(android.graphics.Color.blue(a[i])-android.graphics.Color.blue(b[i]))));
+            if(delta>8)changed++;
+        }
+        return changed<=a.length/1000;
+    }
+    private void testOverlays(Context context,ClassLoader loader)throws Exception {
+        Class<?> touchClass=Class.forName("a.f0",true,loader),listenerClass=Class.forName("a.d0",true,loader),render=Class.forName("com.naruto.r2.TouchRender",true,loader),stats=Class.forName("a.a0",true,loader),statsHelper=Class.forName("com.naruto.r2.StatsOverlay",true,loader);
+        final android.widget.FrameLayout[] frame={null}; final View[] touchView={null},statsView={null}; final Throwable[] error={null};
+        final List<int[]> inputs=new ArrayList<>(); Object listener=java.lang.reflect.Proxy.newProxyInstance(loader,new Class<?>[]{listenerClass},(proxy,method,args)->{if(method.getName().equals("c")){int[] state=new int[7];for(int i=0;i<7;i++)state[i]=(Integer)args[i];inputs.add(state);}return null;});
+        android.content.SharedPreferences prefs=context.getSharedPreferences("naruto",0); prefs.edit().remove("r2_stats_scale").remove("stats_collapsed").commit();
+        try {
+            runOnMainSync(()->{try{
+                frame[0]=new android.widget.FrameLayout(launcher);frame[0].setBackgroundColor(android.graphics.Color.BLACK);
+                launcher.addContentView(frame[0],new ViewGroup.LayoutParams(-1,-1));
+                touchView[0]=(View)touchClass.getConstructor(Activity.class,listenerClass).newInstance(launcher,listener);
+                frame[0].addView(touchView[0],new android.widget.FrameLayout.LayoutParams(-1,-1));
+                touchClass.getMethod("setOpacity",float.class).invoke(touchView[0],.7f);
+            }catch(Throwable e){error[0]=e;}}); if(error[0]!=null)throw new RuntimeException(error[0]);
+            waitForIdleSync();check(touchView[0].isHardwareAccelerated(),"Touch cache is tested on a real hardware Canvas");
+            Field stateField=touchClass.getField("r2RenderState");render.getMethod("invalidate",touchClass).invoke(null,touchView[0]);
+            Object state=stateField.get(touchView[0]);Field enabled=state.getClass().getField("enabled"),recordings=state.getClass().getField("recordings"),hits=state.getClass().getField("hits");
+            for(int mask:new int[]{0,8192,4096,32768}) {
+                runOnMainSync(()->{try{enabled.setBoolean(state,false);touchClass.getField("D").setInt(touchView[0],mask);touchView[0].invalidate();}catch(Throwable e){error[0]=e;}});
+                android.graphics.Bitmap original=region(touchView[0]);
+                runOnMainSync(()->{try{enabled.setBoolean(state,true);touchView[0].invalidate();}catch(Throwable e){error[0]=e;}});
+                android.graphics.Bitmap cached=region(touchView[0]);
+                check(samePixels(original,cached),"Cached stock touch artwork matches original rendering, button mask "+mask);original.recycle();cached.recycle();
+            }
+            int recorded=recordings.getInt(state),hit=hits.getInt(state);
+            runOnMainSync(()->touchView[0].invalidate());waitForIdleSync();SystemClock.sleep(100);
+            check(recordings.getInt(state)==recorded&&hits.getInt(state)>hit,"Unchanged buttons reuse recorded artwork without rebuilding gradients");
+            runOnMainSync(()->{try{
+                Object[] buttons=(Object[])touchClass.getField("a").get(touchView[0]);Object button=buttons[1];float x=button.getClass().getField("j").getFloat(button),y=button.getClass().getField("k").getFloat(button);
+                touchClass.getField("D").setInt(touchView[0],0);inputs.clear();
+                long t=SystemClock.uptimeMillis();
+                for(int action:new int[]{MotionEvent.ACTION_DOWN,MotionEvent.ACTION_MOVE,MotionEvent.ACTION_CANCEL}){MotionEvent event=MotionEvent.obtain(t,t+10,action,x,y,0);touchView[0].onTouchEvent(event);event.recycle();}
+                check(inputs.size()>=2&&(inputs.get(0)[0]&4096)!=0&&inputs.get(inputs.size()-1)[0]==0,"Stock touch press and cancellation still deliver native button transitions immediately");
+                statsView[0]=(View)stats.getConstructor(Activity.class,SharedPreferences.class).newInstance(launcher,prefs);
+                statsHelper.getMethod("resize",stats).invoke(null,statsView[0]);
+                float d=context.getResources().getDisplayMetrics().density;
+                frame[0].addView(statsView[0],new android.widget.FrameLayout.LayoutParams(Math.round(230*d),Math.round(100*d)));
+                stats.getMethod("setValues",float[].class).invoke(statsView[0],(Object)new float[]{30,20,2000,40,600,2,60});
+            }catch(Throwable e){error[0]=e;}});if(error[0]!=null)throw new RuntimeException(error[0]);
+            long until=SystemClock.uptimeMillis()+5000;
+            while(stats.getField("a").get(statsView[0])==null&&SystemClock.uptimeMillis()<until)SystemClock.sleep(20);
+            waitForIdleSync();check(stats.getField("a").get(statsView[0])!=null&&statsView[0].getVisibility()==View.VISIBLE,"Statistics sample publishes after asynchronous memory collection");
+            check(Math.abs(statsView[0].getScaleX()-.7f)<.001f&&Math.abs(statsView[0].getScaleY()-.7f)<.001f,"Stock statistics panel defaults to 70 percent in both dimensions");
+            runOnMainSync(()->{try{prefs.edit().putFloat("r2_stats_scale",.5f).apply();statsHelper.getMethod("resize",stats).invoke(null,statsView[0]);statsView[0].setX(100000);statsView[0].setY(100000);statsHelper.getMethod("clamp",stats).invoke(null,statsView[0]);}catch(Throwable e){error[0]=e;}});
+            waitForIdleSync();check(statsView[0].getScaleX()==.5f&&statsView[0].getX()+statsView[0].getWidth()*.5f<=frame[0].getWidth()+1&&statsView[0].getY()+statsView[0].getHeight()*.5f<=frame[0].getHeight()+1,"Changing panel size keeps its visible bounds on screen");
+            runOnMainSync(()->{try{
+                float d=context.getResources().getDisplayMetrics().density;long t=SystemClock.uptimeMillis();
+                for(int action:new int[]{MotionEvent.ACTION_DOWN,MotionEvent.ACTION_UP}){MotionEvent e=MotionEvent.obtain(t,t+10,action,statsView[0].getWidth()-16*d,14*d,0);statsView[0].onTouchEvent(e);e.recycle();}
+                check(stats.getField("i").getBoolean(statsView[0]),"Stock collapse gesture still works on the resized panel");
+                stats.getMethod("setValues",float[].class).invoke(statsView[0],(Object)new float[]{30,20,2000,40,600});
+                stats.getMethod("setValues",float[].class).invoke(statsView[0],(Object)null);
+            }catch(Throwable e){error[0]=e;}});if(error[0]!=null)throw new RuntimeException(error[0]);
+            SystemClock.sleep(300);waitForIdleSync();check(statsView[0].getVisibility()==View.GONE&&stats.getField("a").get(statsView[0])==null,"Late background samples cannot resurrect a hidden statistics panel");
+            runOnMainSync(()->{try{statsHelper.getMethod("sizeDialog",Activity.class,stats).invoke(null,launcher,statsView[0]);}catch(Throwable e){error[0]=e;}});waitForIdleSync();
+            check(!getUiAutomation().getRootInActiveWindow().findAccessibilityNodeInfosByText("FPS / statistics size").isEmpty(),"FPS size adjustment uses the existing dialog style");
+            sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK);waitForIdleSync();
+        } finally {
+            prefs.edit().remove("r2_stats_scale").remove("stats_collapsed").commit();
+            runOnMainSync(()->{if(frame[0]!=null&&frame[0].getParent() instanceof ViewGroup)((ViewGroup)frame[0].getParent()).removeView(frame[0]);});
+        }
     }
     @Override public void onStart() {
         Thread watchdog=new Thread(()->{try{Thread.sleep(120000);}catch(InterruptedException done){return;}if(completed)return;StringBuilder trace=new StringBuilder();for(java.util.Map.Entry<Thread,StackTraceElement[]> entry:Thread.getAllStackTraces().entrySet())if(entry.getKey().getName().equals("main")||entry.getKey().getName().contains("Instr")){trace.append(entry.getKey().getName()).append('\n');int n=0;for(StackTraceElement frame:entry.getValue()){trace.append(frame).append('\n');if(++n==12)break;}}Bundle status=new Bundle();status.putString("stream",trace+"R2_STALL_STAGE="+lastProgress+"\n");sendStatus(1,status);},"R2-watchdog");watchdog.setDaemon(true);watchdog.start();
@@ -181,7 +257,7 @@ public final class R2Instrumentation extends Instrumentation {
         boolean originalLogging=prefs.getBoolean("logging_enabled",false);
         boolean originalPt=prefs.getBoolean("menu_ptbr",false);
         try {
-            check("R2.1".equals(context.getPackageManager().getPackageInfo(context.getPackageName(),0).versionName),"Installed version is R2.1");
+            check("R2.2".equals(context.getPackageManager().getPackageInfo(context.getPackageName(),0).versionName),"Installed version is R2.2");
             check(!originalLogging,"Logging defaults to off on a fresh install");
             ClassLoader loader=context.getClassLoader();
             Class<?> control=Class.forName("com.naruto.port.LoggingControl",true,loader);
@@ -220,6 +296,7 @@ public final class R2Instrumentation extends Instrumentation {
             check(Boolean.TRUE.equals(install.invoke(null)),"Installing native logging hooks again is safe");
             touch(logging);
             check(!prefs.getBoolean("logging_enabled",true),"Turning Logging off persists its setting");
+            check("5".equals(android.system.Os.getenv("XNR_LOG_LEVEL")),"Logging off selects the native early message cutoff");
             check(!state.getBoolean(logging),"Logging switch reflects its disabled state");
             emit.invoke(null,"R1_NATIVE_TEST","R1_LOGGING_OFF_MARKER");
             trace.invoke(null,new RuntimeException("R1_STACK_OFF_MARKER"));

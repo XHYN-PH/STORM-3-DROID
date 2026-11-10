@@ -83,9 +83,21 @@ static void test_relro(void) {
     }
     fclose(maps); CHECK(read_only); munmap(page, size);
 }
+static void test_early_level(void) {
+    CHECK(unsetenv("XNR_LOG_LEVEL") == 0);
+    CHECK(configure_early_logging(false)); CHECK(!strcmp(getenv("XNR_LOG_LEVEL"), "5"));
+    CHECK(configure_early_logging(false)); CHECK(!strcmp(getenv("XNR_LOG_LEVEL"), "5"));
+    CHECK(configure_early_logging(true)); CHECK(getenv("XNR_LOG_LEVEL") == NULL);
+    level_saved = false;
+    CHECK(setenv("XNR_LOG_LEVEL", "3", 1) == 0);
+    CHECK(configure_early_logging(false)); CHECK(!strcmp(getenv("XNR_LOG_LEVEL"), "5"));
+    CHECK(configure_early_logging(true)); CHECK(!strcmp(getenv("XNR_LOG_LEVEL"), "3"));
+    free(original_level); original_level = NULL; level_saved = false;
+    CHECK(unsetenv("XNR_LOG_LEVEL") == 0);
+}
 int main(void) {
     char directory[] = "/tmp/storm-logging-test-XXXXXX"; CHECK(mkdtemp(directory) != NULL); CHECK(chdir(directory) == 0);
-    test_file_output(); test_streams(); test_relro();
+    test_file_output(); test_streams(); test_relro(); test_early_level();
     printf("PASS: %d logging regression assertions (file suppression, status/save preservation, per-library hook chains, stdout/stderr restoration, RELRO and idempotency).\n", checks);
     return 0;
 }
